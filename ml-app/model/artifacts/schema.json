@@ -1,0 +1,44 @@
+{
+  "features": [
+    "age",
+    "income",
+    "loan_amount",
+    "credit_score",
+    "employment_years",
+    "num_existing_loans"
+  ],
+  "dtypes": {
+    "age": "int64",
+    "income": "int64",
+    "loan_amount": "int64",
+    "credit_score": "int64",
+    "employment_years": "int64",
+    "num_existing_loans": "int64"
+  },
+  "ranges": {
+    "age": {
+      "min": 21,
+      "max": 64
+    },
+    "income": {
+      "min": 20028,
+      "max": 149949
+    },
+    "loan_amount": {
+      "min": 1002,
+      "max": 49994
+    },
+    "credit_score": {
+      "min": 300,
+      "max": 849
+    },
+    "employment_years": {
+      "min": 0,
+      "max": 29
+    },
+    "num_existing_loans": {
+      "min": 0,
+      "max": 9
+    }
+  }
+}
