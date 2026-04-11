@@ -7,6 +7,13 @@ metadata:
     project: secure-mlops
 spec:
   replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.rollback.revisionHistoryLimit }}
+  minReadySeconds: {{ .Values.rollback.minReadySeconds }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: {{ .Values.rollback.maxSurge }}
+      maxUnavailable: {{ .Values.rollback.maxUnavailable }}
   selector:
     matchLabels:
       app: {{ .Release.Name }}-api
@@ -51,3 +58,16 @@ spec:
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
+            {{- if .Values.drift.enabled }}
+            - name: PREDICTION_LOG_DIR
+              value: "/data/predictions"
+          volumeMounts:
+            - name: prediction-data
+              mountPath: /data/predictions
+            {{- end }}
+      {{- if .Values.drift.enabled }}
+      volumes:
+        - name: prediction-data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-prediction-data
+      {{- end }}

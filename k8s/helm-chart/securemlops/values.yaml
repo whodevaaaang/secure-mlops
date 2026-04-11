@@ -41,3 +41,30 @@ metrics:
   serviceMonitor:
     enabled: true
     interval: 15s
+
+drift:
+  enabled: true
+  schedule: "0 */6 * * *"  # Every 6 hours
+  image:
+    repository: securemlops-drift-detector
+    tag: v1
+    pullPolicy: Never
+  pushgateway:
+    enabled: true
+    url: "http://monitoring-kube-prometheus-pushgateway:9091"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  storage:
+    predictions: "1Gi"
+    reports: "1Gi"
+
+rollback:
+  revisionHistoryLimit: 5
+  maxSurge: 1
+  maxUnavailable: 0
+  minReadySeconds: 30

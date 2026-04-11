@@ -7,12 +7,16 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from prometheus_fastapi_instrumentator import Instrumentator
 from prometheus_client import Counter, Histogram, Gauge
+import csv
 import joblib
 import json
+import logging
 import time
 import os
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="SecureMLOps - Loan Default Prediction API",
@@ -55,6 +59,25 @@ SCHEMA_PATH = os.getenv("SCHEMA_PATH", os.path.join(_dir, "model", "artifacts", 
 
 model = None
 schema = None
+
+# Prediction logging for drift detection
+PREDICTION_LOG_DIR = os.getenv("PREDICTION_LOG_DIR", os.path.join(_dir, "data", "predictions"))
+PREDICTION_LOG_FIELDS = ["age", "income", "loan_amount", "credit_score", "employment_years", "num_existing_loans"]
+
+
+def log_prediction(input_data: dict):
+    """Append prediction input to CSV for drift detection."""
+    try:
+        os.makedirs(PREDICTION_LOG_DIR, exist_ok=True)
+        log_path = os.path.join(PREDICTION_LOG_DIR, "current.csv")
+        file_exists = os.path.exists(log_path)
+        with open(log_path, "a", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=PREDICTION_LOG_FIELDS)
+            if not file_exists:
+                writer.writeheader()
+            writer.writerow({k: input_data[k] for k in PREDICTION_LOG_FIELDS})
+    except Exception as e:
+        logger.warning("Failed to log prediction for drift detection: %s", e)
 
 @app.on_event("startup")
 def load_model():
@@ -143,6 +166,9 @@ def predict(application: LoanApplication):
         risk_level = "HIGH"
 
     prediction_label = "DEFAULT" if prediction == 1 else "NO DEFAULT"
+
+    # Log input for drift detection
+    log_prediction(input_data.iloc[0].to_dict())
 
     # Record custom Prometheus metrics
     PREDICTION_COUNT.labels(prediction=prediction_label, risk_level=risk_level).inc()
