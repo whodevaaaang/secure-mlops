@@ -1,0 +1,41 @@
+---
+- name: Check Minikube status
+  command: minikube status --format='{{`{{ .Host }}`}}'
+  register: minikube_status
+  changed_when: false
+  failed_when: false
+
+- name: Start Minikube cluster
+  command: >
+    minikube start
+    --driver={{ minikube_driver }}
+    --cpus={{ minikube_cpus }}
+    --memory={{ minikube_memory }}
+  when: minikube_status.stdout != 'Running'
+  register: minikube_start
+
+- name: Display Minikube start output
+  debug:
+    msg: "{{ minikube_start.stdout_lines }}"
+  when: minikube_start is changed
+
+- name: Enable Minikube addons
+  command: "minikube addons enable {{ item }}"
+  loop:
+    - metrics-server
+    - ingress
+  register: addon_result
+  changed_when: "'already enabled' not in addon_result.stdout"
+
+- name: Verify cluster is ready
+  command: kubectl cluster-info
+  register: cluster_info
+  changed_when: false
+
+- name: Display cluster info
+  debug:
+    msg: "{{ cluster_info.stdout_lines }}"
+
+- name: Wait for kube-system pods to be ready
+  command: kubectl wait --for=condition=Ready pods --all -n kube-system --timeout=120s
+  changed_when: false

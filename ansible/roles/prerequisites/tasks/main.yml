@@ -1,0 +1,122 @@
+---
+- name: Check if Docker is installed
+  command: docker --version
+  register: docker_check
+  changed_when: false
+  failed_when: false
+
+- name: Install Docker (Ubuntu/Debian)
+  when: docker_check.rc != 0
+  become: true
+  block:
+    - name: Install Docker dependencies
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+        update_cache: true
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
+    - name: Install Docker Engine
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+
+    - name: Add current user to docker group
+      user:
+        name: "{{ ansible_user_id }}"
+        groups: docker
+        append: true
+
+    - name: Enable and start Docker service
+      systemd:
+        name: docker
+        state: started
+        enabled: true
+
+- name: Check if kubectl is installed
+  command: kubectl version --client
+  register: kubectl_check
+  changed_when: false
+  failed_when: false
+
+- name: Install kubectl
+  when: kubectl_check.rc != 0
+  become: true
+  block:
+    - name: Download kubectl binary
+      get_url:
+        url: "https://dl.k8s.io/release/v1.29.0/bin/linux/amd64/kubectl"
+        dest: /usr/local/bin/kubectl
+        mode: "0755"
+
+- name: Check if Minikube is installed
+  command: minikube version
+  register: minikube_check
+  changed_when: false
+  failed_when: false
+
+- name: Install Minikube
+  when: minikube_check.rc != 0
+  become: true
+  block:
+    - name: Download Minikube binary
+      get_url:
+        url: https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+        dest: /usr/local/bin/minikube
+        mode: "0755"
+
+- name: Check if Helm is installed
+  command: helm version
+  register: helm_check
+  changed_when: false
+  failed_when: false
+
+- name: Install Helm
+  when: helm_check.rc != 0
+  become: true
+  block:
+    - name: Download Helm install script
+      get_url:
+        url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+        dest: /tmp/get_helm.sh
+        mode: "0755"
+
+    - name: Run Helm install script
+      command: /tmp/get_helm.sh
+      changed_when: true
+
+- name: Verify all tools are installed
+  command: "{{ item }}"
+  loop:
+    - docker --version
+    - kubectl version --client
+    - minikube version
+    - helm version --short
+  register: tool_versions
+  changed_when: false
+
+- name: Display installed tool versions
+  debug:
+    msg: "{{ item.stdout }}"
+  loop: "{{ tool_versions.results }}"
+  loop_control:
+    label: "{{ item.item }}"

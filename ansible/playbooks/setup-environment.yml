@@ -1,0 +1,44 @@
+---
+# Setup Environment Playbook
+# Installs all prerequisites, starts Minikube, and deploys the ML API
+#
+# Usage:
+#   cd ansible
+#   ansible-playbook playbooks/setup-environment.yml
+#
+# To skip prerequisites (if already installed):
+#   ansible-playbook playbooks/setup-environment.yml --skip-tags prerequisites
+
+- name: Setup SecureMLOps Development Environment
+  hosts: localhost
+  gather_facts: true
+
+  pre_tasks:
+    - name: Verify running on Linux
+      assert:
+        that: ansible_system == "Linux"
+        fail_msg: "This playbook requires a Linux environment"
+
+  roles:
+    - role: prerequisites
+      tags: [prerequisites]
+    - role: minikube
+      tags: [minikube]
+    - role: app_deploy
+      tags: [deploy]
+
+  post_tasks:
+    - name: Environment setup complete
+      debug:
+        msg:
+          - "========================================="
+          - "  SecureMLOps Environment Ready!"
+          - "========================================="
+          - "Minikube cluster: Running"
+          - "ML API: Deployed ({{ replicaCount | default(2) }} replicas)"
+          - ""
+          - "Useful commands:"
+          - "  kubectl get pods"
+          - "  kubectl logs -l app={{ helm_release_name }}-api"
+          - "  minikube service {{ helm_release_name }}-service --url"
+          - "========================================="
