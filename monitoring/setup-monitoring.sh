@@ -10,18 +10,18 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 echo "=== SecureMLOps Monitoring Setup ==="
 
 # Step 1: Add Helm repo
-echo "[1/5] Adding prometheus-community Helm repo..."
+echo "[1/6] Adding prometheus-community Helm repo..."
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts 2>/dev/null || true
 helm repo update
 
-# Step 2: Install kube-prometheus-stack
-echo "[2/5] Installing kube-prometheus-stack..."
+# Step 2: Install kube-prometheus-stack (includes Pushgateway for drift metrics)
+echo "[2/6] Installing kube-prometheus-stack..."
 helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
   -f "$SCRIPT_DIR/prometheus/kube-prometheus-values.yml" \
   --wait --timeout 5m
 
 # Step 3: Create dashboard ConfigMaps from JSON files
-echo "[3/5] Loading Grafana dashboards..."
+echo "[3/6] Loading Grafana dashboards..."
 for dashboard in "$SCRIPT_DIR/grafana/dashboards/"*.json; do
   name=$(basename "$dashboard" .json)
   kubectl create configmap "grafana-dashboard-${name}" \
@@ -32,11 +32,16 @@ for dashboard in "$SCRIPT_DIR/grafana/dashboards/"*.json; do
 done
 
 # Step 4: Apply ServiceMonitor for ML API
-echo "[4/5] Applying ServiceMonitor..."
+echo "[4/6] Applying ServiceMonitor..."
 kubectl apply -f "$SCRIPT_DIR/prometheus/servicemonitor.yml"
 
-# Step 5: Display access info
-echo "[5/5] Setup complete!"
+# Step 5: Build drift detector image in Minikube
+echo "[5/6] Building drift detector image..."
+eval $(minikube docker-env)
+docker build -t securemlops-drift-detector:v1 "$SCRIPT_DIR/evidently/"
+
+# Step 6: Display access info
+echo "[6/6] Setup complete!"
 echo ""
 echo "=== Access Information ==="
 GRAFANA_URL=$(minikube service monitoring-grafana --url 2>/dev/null || echo "pending")
@@ -56,3 +61,8 @@ echo "Dashboards loaded:"
 echo "  - API Performance"
 echo "  - System Resources"
 echo "  - Prediction Metrics"
+echo "  - Drift Detection"
+echo ""
+echo "Drift detection CronJob will run on the schedule defined in Helm values."
+echo "To run drift detection manually:"
+echo "  kubectl create job --from=cronjob/securemlops-drift-detection drift-manual-\$(date +%s)"
