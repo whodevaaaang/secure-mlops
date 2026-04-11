@@ -33,3 +33,11 @@ env:
   MODEL_PATH: "/app/model/artifacts/model.joblib"
   SCHEMA_PATH: "/app/model/artifacts/schema.json"
   METRICS_PATH: "/app/model/artifacts/metrics.json"
+
+metrics:
+  enabled: true
+  port: 8000
+  path: /metrics
+  serviceMonitor:
+    enabled: true
+    interval: 15s

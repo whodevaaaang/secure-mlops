@@ -1,0 +1,30 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-api-performance
+  labels:
+    grafana_dashboard: "1"
+data:
+  api-performance.json: |-
+    {DASHBOARD_JSON_API_PERFORMANCE}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-system-resources
+  labels:
+    grafana_dashboard: "1"
+data:
+  system-resources.json: |-
+    {DASHBOARD_JSON_SYSTEM_RESOURCES}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-prediction-metrics
+  labels:
+    grafana_dashboard: "1"
+data:
+  prediction-metrics.json: |-
+    {DASHBOARD_JSON_PREDICTION_METRICS}
