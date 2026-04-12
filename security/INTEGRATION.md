@@ -107,8 +107,8 @@ Fail condition:
 ### Trivy
 
 - Status: fail
-- Findings: `9`
-- Severity split: `9 HIGH`, `0 CRITICAL`
+- Findings: `7`
+- Severity split: `7 HIGH`, `0 CRITICAL`
 
 Notable packages:
 - OS packages from the base image still contribute most of the remaining findings:
@@ -118,10 +118,8 @@ Notable packages:
   - `libudev1`
   - `ncurses-base`
   - `ncurses-bin`
-- Remaining Python package findings:
-  - `starlette 0.27.0`
-  - `jaraco.context 5.3.0`
-  - `wheel 0.45.1`
+- Remaining Python package finding:
+  - `starlette 0.46.2`
 
 ## Remediation Summary
 
@@ -129,7 +127,9 @@ Notable packages:
 - Production image now installs from `ml-app/requirements-runtime.txt`
 - Docker build context excludes the local virtual environment
 - Image build applies available `openssl` security updates
-- Trivy findings improved from `50` to `9`
+- Runtime image removes `pip`, `setuptools`, and `wheel`
+- FastAPI upgraded to `0.115.14`
+- Trivy findings improved from `50` to `7`
 
 ## Coordination Notes
 

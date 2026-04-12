@@ -27,7 +27,7 @@ COPY --from=builder /install /usr/local
 COPY . .
 
 # Remove packaging tooling that is not needed at runtime.
-RUN python -m pip uninstall -y wheel
+RUN python -m pip uninstall -y wheel pip setuptools
 
 # Set ownership
 RUN chown -R mluser:mluser /app
