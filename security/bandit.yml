@@ -1,0 +1,6 @@
+exclude_dirs:
+  - ml-app/tests
+  - ml-app/venv
+
+skips:
+  - B101

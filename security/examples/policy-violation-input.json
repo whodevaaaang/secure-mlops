@@ -1,0 +1,24 @@
+{
+  "image": "python:3.9",
+  "image_scan": {
+    "status": "failed",
+    "severity_threshold": "HIGH",
+    "report": ""
+  },
+  "model": {
+    "metrics": {
+      "accuracy": 0.71
+    }
+  },
+  "spec": {
+    "containers": [
+      {
+        "name": "securemlops-api",
+        "securityContext": {
+          "runAsNonRoot": false,
+          "runAsUser": 0
+        }
+      }
+    ]
+  }
+}

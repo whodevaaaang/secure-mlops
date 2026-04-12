@@ -1,0 +1,24 @@
+{
+  "image": "python:3.10-slim",
+  "image_scan": {
+    "status": "passed",
+    "severity_threshold": "HIGH",
+    "report": "security/reports/generated/trivy-report.json"
+  },
+  "model": {
+    "metrics": {
+      "accuracy": 0.982
+    }
+  },
+  "spec": {
+    "containers": [
+      {
+        "name": "securemlops-api",
+        "securityContext": {
+          "runAsNonRoot": true,
+          "runAsUser": 10001
+        }
+      }
+    ]
+  }
+}
