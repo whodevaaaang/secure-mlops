@@ -107,13 +107,29 @@ Fail condition:
 ### Trivy
 
 - Status: fail
-- Findings: `50`
-- Severity split: `43 HIGH`, `7 CRITICAL`
+- Findings: `9`
+- Severity split: `9 HIGH`, `0 CRITICAL`
 
 Notable packages:
-- `mlflow 2.9.2`: multiple `CRITICAL` findings, fixed in `2.10.0`
-- `gunicorn 21.2.0`: `HIGH` findings, fixed in `22.0.0`
-- `openssl 3.5.5-1~deb13u1`: `HIGH` findings, fixed in `3.5.5-1~deb13u2`
+- OS packages from the base image still contribute most of the remaining findings:
+  - `libncursesw6`
+  - `libsystemd0`
+  - `libtinfo6`
+  - `libudev1`
+  - `ncurses-base`
+  - `ncurses-bin`
+- Remaining Python package findings:
+  - `starlette 0.27.0`
+  - `jaraco.context 5.3.0`
+  - `wheel 0.45.1`
+
+## Remediation Summary
+
+- Production image no longer installs `mlflow`, `pytest`, or `httpx`
+- Production image now installs from `ml-app/requirements-runtime.txt`
+- Docker build context excludes the local virtual environment
+- Image build applies available `openssl` security updates
+- Trivy findings improved from `50` to `9`
 
 ## Coordination Notes
 

@@ -12,12 +12,13 @@
 - Ran local Gitleaks scan (`0` findings)
 - Ran local Bandit scan (`0` findings)
 - Ran local OPA validation
-- Ran local Trivy scan (`50` findings)
+- Reduced Trivy findings from `50` to `9`
 - Pushed `feature/security-scanning` to GitHub
 
 ## Next
 
-- Reduce Trivy findings by updating vulnerable packages and/or base image
+- Try a FastAPI/Starlette upgrade in a separate safe pass
+- Decide whether to accept or document the remaining base-image OS findings
 - Prepare a second commit focused on remediation
 - Share `security/INTEGRATION.md` with Nikhil for Jenkins integration
 - Use the policy violation sample during final demo testing

@@ -1,15 +1,22 @@
 # Stage 1: Build
-FROM python:3.10-slim as builder
+FROM python:3.10-slim AS builder
 
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+COPY requirements-runtime.txt .
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir --prefix=/install -r requirements-runtime.txt
 
 # Stage 2: Production
 FROM python:3.10-slim
 
 # Security: run as non-root user
-RUN groupadd -r mluser && useradd -r -g mluser mluser
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd -r mluser \
+    && useradd -r -g mluser mluser
 
 WORKDIR /app
 
@@ -18,6 +25,9 @@ COPY --from=builder /install /usr/local
 
 # Copy application code
 COPY . .
+
+# Remove packaging tooling that is not needed at runtime.
+RUN python -m pip uninstall -y wheel
 
 # Set ownership
 RUN chown -R mluser:mluser /app
