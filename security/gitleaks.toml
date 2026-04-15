@@ -1,0 +1,39 @@
+# Gitleaks configuration for SecureMLOps
+# Detects secrets, credentials, and API keys in the repository
+# Docs: https://github.com/gitleaks/gitleaks
+
+title = "SecureMLOps Gitleaks Config"
+
+[extend]
+# Use the default gitleaks rules as a baseline
+useDefault = true
+
+# Custom rules for ML/DevOps specific patterns
+[[rules]]
+id = "mlflow-tracking-token"
+description = "MLflow Tracking Token"
+regex = '''(?i)mlflow[_-]?tracking[_-]?token\s*[=:]\s*['"]?[\w-]{20,}'''
+tags = ["mlflow", "token"]
+
+[[rules]]
+id = "database-connection-string"
+description = "Database Connection String"
+regex = '''(?i)(postgres|mysql|mongodb)://[^:]+:[^@]+@[^/]+/\w+'''
+tags = ["database", "connection"]
+
+[[rules]]
+id = "grafana-api-key"
+description = "Grafana API Key"
+regex = '''(?i)grafana[_-]?api[_-]?key\s*[=:]\s*['"]?eyJ[\w-]+'''
+tags = ["grafana", "api-key"]
+
+# Paths to exclude from scanning
+[allowlist]
+paths = [
+    '''\.trivyignore$''',
+    '''security/reports/.*''',
+    '''ml-app/data/.*''',
+    '''\.git/.*''',
+    '''venv/.*''',
+    '''__pycache__/.*''',
+]

@@ -18,6 +18,7 @@
 - Week 3 COMPLETE: Evidently AI drift detection (CronJob, Pushgateway, drift dashboard), prediction logging
 - Week 3 COMPLETE: Rollback mechanism (rolling update strategy, rollback.sh, revision history)
 - Week 3 COMPLETE: Architecture diagrams (3 Mermaid diagrams), comprehensive README
+- Week 4 IN PROGRESS: Security integration with infrastructure (Trivy scanning in Helm flow, OPA policies, security Grafana dashboard)
 
 ## Tech Stack
 
@@ -46,6 +47,9 @@
 - Ansible teardown: cd ansible && ansible-playbook playbooks/teardown.yml
 - Manual drift check: kubectl create job --from=cronjob/securemlops-drift-detection drift-manual-$(date +%s)
 - Docker Compose (local): docker-compose up --build
+- Trivy image scan: bash security/trivy-scan.sh [image:tag]
+- OPA policy validation: bash security/validate-manifests.sh
+- Export security metrics: bash security/security-metrics-exporter.sh [pushgateway_url]
 
 ## Git Workflow
 
@@ -55,8 +59,8 @@
 ## What Needs To Be Done Next
 
 1. Populate Jenkins pipeline (ci/Jenkinsfile) with 8 stages
-2. Configure security tools (security/gitleaks.toml, security/trivy-config.yaml)
-3. Set up SonarQube + OPA policies
+2. ~~Configure security tools (security/gitleaks.toml, security/trivy-config.yaml)~~ DONE
+3. ~~Set up OPA policies~~ DONE - SonarQube integration still needed
 4. Blue-green deployment strategy
 5. Load testing and performance benchmarks
 6. Screenshots for README dashboard placeholders
