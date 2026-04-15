@@ -1,0 +1,63 @@
+{{- if .Values.drift.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-drift-detection
+  labels:
+    app: {{ .Release.Name }}-drift
+    project: secure-mlops
+spec:
+  schedule: {{ .Values.drift.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            app: {{ .Release.Name }}-drift
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: drift-detector
+              image: "{{ .Values.drift.image.repository }}:{{ .Values.drift.image.tag }}"
+              imagePullPolicy: {{ .Values.drift.image.pullPolicy }}
+              args:
+                - "--reference"
+                - "/data/reference/test_data.csv"
+                - "--current"
+                - "/data/predictions/current.csv"
+                {{- if .Values.drift.pushgateway.enabled }}
+                - "--pushgateway"
+                - {{ .Values.drift.pushgateway.url | quote }}
+                {{- end }}
+                - "--report-dir"
+                - "/data/reports"
+              volumeMounts:
+                - name: reference-data
+                  mountPath: /data/reference
+                  readOnly: true
+                - name: prediction-data
+                  mountPath: /data/predictions
+                - name: report-data
+                  mountPath: /data/reports
+              resources:
+                requests:
+                  memory: {{ .Values.drift.resources.requests.memory | quote }}
+                  cpu: {{ .Values.drift.resources.requests.cpu | quote }}
+                limits:
+                  memory: {{ .Values.drift.resources.limits.memory | quote }}
+                  cpu: {{ .Values.drift.resources.limits.cpu | quote }}
+          volumes:
+            - name: reference-data
+              configMap:
+                name: {{ .Release.Name }}-reference-data
+            - name: prediction-data
+              persistentVolumeClaim:
+                claimName: {{ .Release.Name }}-prediction-data
+            - name: report-data
+              persistentVolumeClaim:
+                claimName: {{ .Release.Name }}-drift-reports
+{{- end }}

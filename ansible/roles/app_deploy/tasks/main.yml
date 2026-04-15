@@ -1,0 +1,77 @@
+---
+- name: Get Minikube Docker environment
+  command: minikube docker-env --shell bash
+  register: minikube_docker_env
+  changed_when: false
+
+- name: Parse Minikube Docker environment variables
+  set_fact:
+    minikube_env: "{{ minikube_env | default({}) | combine({item.split('=')[0]: item.split('=')[1] | regex_replace('\"', '')}) }}"
+  loop: "{{ minikube_docker_env.stdout_lines | select('match', '^export ') | map('regex_replace', '^export ', '') | list }}"
+  when: "'=' in item"
+
+- name: Build Docker image in Minikube context
+  command: docker build -t {{ docker_image_name }}:{{ docker_image_tag }} .
+  args:
+    chdir: "{{ project_root }}/ml-app"
+  environment: "{{ minikube_env }}"
+  register: docker_build
+
+- name: Display build output
+  debug:
+    msg: "{{ docker_build.stdout_lines[-5:] }}"
+
+- name: Check if Helm release exists
+  command: helm status {{ helm_release_name }}
+  register: helm_status
+  changed_when: false
+  failed_when: false
+
+- name: Install Helm chart (fresh install)
+  command: >
+    helm install {{ helm_release_name }}
+    {{ project_root }}/k8s/helm-chart/securemlops/
+    --namespace {{ k8s_namespace }}
+    --set image.repository={{ docker_image_name }}
+    --set image.tag={{ docker_image_tag }}
+  when: helm_status.rc != 0
+
+- name: Upgrade Helm chart (existing release)
+  command: >
+    helm upgrade {{ helm_release_name }}
+    {{ project_root }}/k8s/helm-chart/securemlops/
+    --namespace {{ k8s_namespace }}
+    --set image.repository={{ docker_image_name }}
+    --set image.tag={{ docker_image_tag }}
+  when: helm_status.rc == 0
+
+- name: Wait for deployment rollout
+  command: kubectl rollout status deployment/{{ helm_release_name }}-api --timeout=120s
+  changed_when: false
+
+- name: Verify running pods
+  command: kubectl get pods -l app={{ helm_release_name }}-api -o wide
+  register: pod_status
+  changed_when: false
+
+- name: Display pod status
+  debug:
+    msg: "{{ pod_status.stdout_lines }}"
+
+- name: Verify service
+  command: kubectl get service {{ helm_release_name }}-service
+  register: service_status
+  changed_when: false
+
+- name: Display service info
+  debug:
+    msg: "{{ service_status.stdout_lines }}"
+
+- name: Get Minikube service URL
+  command: minikube service {{ helm_release_name }}-service --url
+  register: service_url
+  changed_when: false
+
+- name: Display application URL
+  debug:
+    msg: "Application accessible at: {{ service_url.stdout }}"

@@ -1,0 +1,28 @@
+{{- if .Values.drift.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-prediction-data
+  labels:
+    app: {{ .Release.Name }}-api
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.drift.storage.predictions }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-drift-reports
+  labels:
+    app: {{ .Release.Name }}-drift
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.drift.storage.reports }}
+{{- end }}

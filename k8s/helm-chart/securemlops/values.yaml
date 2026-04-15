@@ -1,0 +1,70 @@
+replicaCount: 2
+
+image:
+  repository: secure-mlops-api
+  tag: v1
+  pullPolicy: Never
+
+service:
+  type: NodePort
+  port: 80
+  targetPort: 8000
+  nodePort: 30080
+
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "250m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+
+health:
+  liveness:
+    path: /health
+    initialDelaySeconds: 15
+    periodSeconds: 30
+  readiness:
+    path: /ready
+    initialDelaySeconds: 10
+    periodSeconds: 10
+
+env:
+  MODEL_PATH: "/app/model/artifacts/model.joblib"
+  SCHEMA_PATH: "/app/model/artifacts/schema.json"
+  METRICS_PATH: "/app/model/artifacts/metrics.json"
+
+metrics:
+  enabled: true
+  port: 8000
+  path: /metrics
+  serviceMonitor:
+    enabled: true
+    interval: 15s
+
+drift:
+  enabled: true
+  schedule: "0 */6 * * *"  # Every 6 hours
+  image:
+    repository: securemlops-drift-detector
+    tag: v1
+    pullPolicy: Never
+  pushgateway:
+    enabled: true
+    url: "http://monitoring-kube-prometheus-pushgateway:9091"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  storage:
+    predictions: "1Gi"
+    reports: "1Gi"
+
+rollback:
+  revisionHistoryLimit: 5
+  maxSurge: 1
+  maxUnavailable: 0
+  minReadySeconds: 30
