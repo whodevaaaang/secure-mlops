@@ -1,0 +1,36 @@
+# Trivy vulnerability scanner configuration
+# Used for container image scanning before Helm deployments
+# Docs: https://aquasecurity.github.io/trivy
+
+severity:
+  - CRITICAL
+  - HIGH
+  - MEDIUM
+
+# Exit code 1 on CRITICAL/HIGH findings to block deployment
+exit-code: 1
+
+# Vulnerability scanning
+vulnerability:
+  type:
+    - os
+    - library
+  ignore-unfixed: true
+
+# Secret scanning in container layers
+secret:
+  config: {}
+
+# Misconfiguration scanning for Dockerfiles
+misconfiguration:
+  include:
+    - dockerfile
+
+# Scan timeout
+timeout: 5m0s
+
+# Output format (overridden by CLI flags in scripts)
+format: table
+
+# Ignore file for known false positives
+ignorefile: .trivyignore

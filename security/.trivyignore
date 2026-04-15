@@ -1,0 +1,7 @@
+# Trivy false positive ignore list
+# Add CVE IDs for known false positives that have been reviewed
+# Format: CVE-YYYY-NNNNN
+# See: https://aquasecurity.github.io/trivy/latest/docs/configuration/filtering/
+
+# Example (uncomment when needed):
+# CVE-2023-XXXXX  # Description of why this is ignored
