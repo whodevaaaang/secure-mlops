@@ -26,3 +26,6 @@ mlartifacts/
 
 # Logs
 *.log
+
+# Security scan outputs
+security/reports/generated/

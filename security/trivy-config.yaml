@@ -32,5 +32,12 @@ timeout: 5m0s
 # Output format (overridden by CLI flags in scripts)
 format: table
 
+# List all packages for audit trail
+list-all-pkgs: true
+
+# Skip virtual environment directories
+skip-dirs:
+  - /app/venv
+
 # Ignore file for known false positives
 ignorefile: .trivyignore

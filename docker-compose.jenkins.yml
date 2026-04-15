@@ -1,0 +1,51 @@
+# Docker Compose for running Jenkins locally with SecureMLOps pipeline
+# Usage: docker-compose -f docker-compose.jenkins.yml up -d
+# Access: http://localhost:8081 (initial admin password in container logs)
+
+services:
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: securemlops-jenkins
+    user: root
+    ports:
+      - "8081:8080"       # Jenkins UI (8081 to avoid conflict with ML API on 8000)
+      - "50000:50000"     # Jenkins agent communication
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock   # Docker-in-Docker for builds
+      - ./:/workspace                                # Mount project for pipeline access
+    environment:
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=true
+      - JENKINS_OPTS=--prefix=/
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/login"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  sonarqube:
+    image: sonarqube:lts-community
+    container_name: securemlops-sonarqube
+    ports:
+      - "9000:9000"       # SonarQube UI
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_extensions:/opt/sonarqube/extensions
+    environment:
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true   # Required for single-node dev setup
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/api/system/status | grep -q UP"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+volumes:
+  jenkins_home:
+  sonarqube_data:
+  sonarqube_logs:
+  sonarqube_extensions:
