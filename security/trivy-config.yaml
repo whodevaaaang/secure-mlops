@@ -1,0 +1,15 @@
+format: json
+severity:
+  - HIGH
+  - CRITICAL
+ignore-unfixed: false
+vuln-type:
+  - os
+  - library
+scanners:
+  - vuln
+exit-code: 1
+timeout: 10m0s
+list-all-pkgs: true
+skip-dirs:
+  - /app/venv

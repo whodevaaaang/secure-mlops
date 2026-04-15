@@ -1,0 +1,18 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Ignore generated test fixtures and documentation-only secrets"
+paths = [
+  '''ml-app/model/artifacts/test_data\.csv''',
+  '''ml-app/model/artifacts/test_labels\.csv''',
+  '''security/reports/generated/'''
+]
+
+regexes = [
+  '''example\.com''',
+  '''dummy''',
+  '''sample''',
+  '''test''',
+  '''changeme'''
+]
