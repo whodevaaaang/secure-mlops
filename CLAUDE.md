@@ -19,6 +19,7 @@
 - Week 3 COMPLETE: Rollback mechanism (rolling update strategy, rollback.sh, revision history)
 - Week 3 COMPLETE: Architecture diagrams (3 Mermaid diagrams), comprehensive README
 - Week 4 IN PROGRESS: Jenkins CI/CD pipeline (10 stages), docker-compose.jenkins.yml for local Jenkins + SonarQube
+- Week 4 IN PROGRESS: Security integration with infrastructure (Trivy scanning in Helm flow, OPA policies, security Grafana dashboard)
 
 ## Tech Stack
 
@@ -49,6 +50,9 @@
 - Docker Compose (local): docker-compose up --build
 - Start Jenkins + SonarQube: docker-compose -f docker-compose.jenkins.yml up -d
 - Install Jenkins tools: docker exec securemlops-jenkins bash /workspace/ci/scripts/setup-jenkins-tools.sh
+- Trivy image scan: bash security/trivy-scan.sh [image:tag]
+- OPA policy validation: bash security/validate-manifests.sh
+- Export security metrics: bash security/security-metrics-exporter.sh [pushgateway_url]
 
 ## Git Workflow
 
@@ -58,8 +62,8 @@
 ## What Needs To Be Done Next
 
 1. ~~Populate Jenkins pipeline (ci/Jenkinsfile)~~ DONE - 10 stages implemented
-2. Configure security tools (security/gitleaks.toml, security/trivy-config.yaml)
-3. Set up SonarQube + OPA policies
+2. ~~Configure security tools (security/gitleaks.toml, security/trivy-config.yaml)~~ DONE
+3. ~~Set up OPA policies~~ DONE - SonarQube integration still needed
 4. Blue-green deployment strategy
 5. Load testing and performance benchmarks
 6. Screenshots for README dashboard placeholders

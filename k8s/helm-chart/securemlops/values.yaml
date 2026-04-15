@@ -68,3 +68,19 @@ rollback:
   maxSurge: 1
   maxUnavailable: 0
   minReadySeconds: 30
+
+security:
+  trivy:
+    enabled: true
+    image:
+      repository: aquasec/trivy
+      tag: latest
+    severity: "CRITICAL,HIGH"
+    exitCode: 1
+    timeout: "5m0s"
+    dockerSocket: false
+    pushgateway:
+      enabled: true
+      url: "http://monitoring-kube-prometheus-pushgateway:9091"
+  opa:
+    enabled: true

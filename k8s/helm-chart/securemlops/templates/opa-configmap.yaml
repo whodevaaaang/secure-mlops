@@ -1,0 +1,41 @@
+{{- if .Values.security.opa.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-opa-policies
+  labels:
+    app: {{ .Release.Name }}
+    component: security
+data:
+  k8s-security.rego: |
+    package k8s.security
+    import rego.v1
+
+    deny contains msg if {
+      input.kind == "Deployment"
+      container := input.spec.template.spec.containers[_]
+      not container.resources.limits
+      msg := sprintf("Container '%s' must define resource limits", [container.name])
+    }
+
+    deny contains msg if {
+      input.kind == "Deployment"
+      container := input.spec.template.spec.containers[_]
+      container.securityContext.privileged == true
+      msg := sprintf("Container '%s' must not run as privileged", [container.name])
+    }
+
+    deny contains msg if {
+      input.kind == "Deployment"
+      container := input.spec.template.spec.containers[_]
+      container.securityContext.allowPrivilegeEscalation == true
+      msg := sprintf("Container '%s' must not allow privilege escalation", [container.name])
+    }
+
+    deny contains msg if {
+      input.kind == "Deployment"
+      container := input.spec.template.spec.containers[_]
+      endswith(container.image, ":latest")
+      msg := sprintf("Container '%s' must not use 'latest' image tag", [container.name])
+    }
+{{- end }}
