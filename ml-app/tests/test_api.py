@@ -1,8 +1,10 @@
-import pytest
 import os
 import sys
+import json
+
 import joblib
 
+# Add parent directory to path for api imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -14,16 +16,15 @@ os.environ["MODEL_PATH"] = MODEL_FILE
 os.environ["SCHEMA_PATH"] = SCHEMA_FILE
 os.environ["METRICS_PATH"] = os.path.join(BASE, "model", "artifacts", "metrics.json")
 
-from api.main import app, load_model
-import api.main as main_module
+import api.main as main_module  # noqa: E402
+from api.main import app  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
 
-# Force load the model directly
+# Load model directly (bypass lifespan for test client)
 main_module.model = joblib.load(MODEL_FILE)
-import json
 with open(SCHEMA_FILE) as f:
     main_module.schema = json.load(f)
 
-from fastapi.testclient import TestClient
 client = TestClient(app)
 
 

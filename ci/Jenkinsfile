@@ -1,6 +1,7 @@
 // SecureMLOps CI/CD Pipeline
-// 10-stage pipeline: lint, test, security scan, build, deploy, verify
-// Requires: Docker, Python 3.10, Helm, kubectl, Minikube, Trivy, conftest, Gitleaks, Bandit
+// 12-stage pipeline: checkout, dependencies, lint, test, security scan (parallel),
+// SonarQube, Docker build + Trivy, OPA, Helm deploy, blue-green deploy, health check, load test
+// Requires: Docker, Python 3.10, Helm, kubectl, Minikube, Trivy, conftest, Gitleaks, Bandit, Locust
 
 pipeline {
     agent any

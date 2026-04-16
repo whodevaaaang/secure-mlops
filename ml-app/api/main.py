@@ -3,6 +3,8 @@ Loan Default Prediction API
 FastAPI application serving the trained model.
 """
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -13,15 +15,44 @@ import json
 import logging
 import time
 import os
-import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)
+
+
+def _load_model():
+    """Load the ML model and schema from disk."""
+    global model, schema
+    _dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    model_path = os.getenv("MODEL_PATH", os.path.join(_dir, "model", "artifacts", "model.joblib"))
+    schema_path = os.getenv("SCHEMA_PATH", os.path.join(_dir, "model", "artifacts", "schema.json"))
+
+    if os.path.exists(model_path):
+        model = joblib.load(model_path)
+        MODEL_LOADED.set(1)
+        print(f"Model loaded from {model_path}")
+    else:
+        MODEL_LOADED.set(0)
+        print(f"WARNING: Model not found at {model_path}")
+
+    if os.path.exists(schema_path):
+        with open(schema_path) as f:
+            schema = json.load(f)
+        print(f"Schema loaded from {schema_path}")
+
+
+@asynccontextmanager
+async def lifespan(application):
+    """Application lifespan: load model on startup."""
+    _load_model()
+    yield
+
 
 app = FastAPI(
     title="SecureMLOps - Loan Default Prediction API",
     description="Predicts whether a loan applicant is likely to default",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # Prometheus metrics
@@ -52,11 +83,8 @@ Instrumentator(
     excluded_handlers=["/health", "/ready", "/metrics"],
 ).instrument(app).expose(app, include_in_schema=False)
 
-# Load model and schema at startup
+# Module-level state
 _dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MODEL_PATH = os.getenv("MODEL_PATH", os.path.join(_dir, "model", "artifacts", "model.joblib"))
-SCHEMA_PATH = os.getenv("SCHEMA_PATH", os.path.join(_dir, "model", "artifacts", "schema.json"))
-
 model = None
 schema = None
 
@@ -78,22 +106,6 @@ def log_prediction(input_data: dict):
             writer.writerow({k: input_data[k] for k in PREDICTION_LOG_FIELDS})
     except Exception as e:
         logger.warning("Failed to log prediction for drift detection: %s", e)
-
-@app.on_event("startup")
-def load_model():
-    global model, schema
-    if os.path.exists(MODEL_PATH):
-        model = joblib.load(MODEL_PATH)
-        MODEL_LOADED.set(1)
-        print(f"Model loaded from {MODEL_PATH}")
-    else:
-        MODEL_LOADED.set(0)
-        print(f"WARNING: Model not found at {MODEL_PATH}")
-
-    if os.path.exists(SCHEMA_PATH):
-        with open(SCHEMA_PATH) as f:
-            schema = json.load(f)
-        print(f"Schema loaded from {SCHEMA_PATH}")
 
 
 class LoanApplication(BaseModel):
