@@ -1,0 +1,188 @@
+{{- if .Values.metrics.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ .Release.Name }}-alerts
+  labels:
+    app: {{ .Release.Name }}-api
+    release: monitoring
+spec:
+  groups:
+    # =====================================================================
+    # API Health Alerts
+    # =====================================================================
+    - name: securemlops-api-health
+      rules:
+        - alert: HighErrorRate
+          expr: |
+            (
+              sum(rate(http_requests_total{handler!~"/health|/ready|/metrics",status=~"5.."}[5m]))
+              /
+              sum(rate(http_requests_total{handler!~"/health|/ready|/metrics"}[5m]))
+            ) > 0.05
+          for: 2m
+          labels:
+            severity: critical
+            team: infrastructure
+          annotations:
+            summary: "High API error rate (> 5%)"
+            description: "The API 5xx error rate has been above 5% for 2 minutes. Current value: {{ "{{ $value | humanizePercentage }}" }}"
+            runbook: "Check pod logs with: kubectl logs -l app={{ .Release.Name }}-api --tail=100"
+
+        - alert: HighLatencyP95
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(http_request_duration_seconds_bucket{handler="/predict"}[5m])) by (le)
+            ) > 0.5
+          for: 5m
+          labels:
+            severity: warning
+            team: infrastructure
+          annotations:
+            summary: "High prediction latency (p95 > 500ms)"
+            description: "The 95th percentile prediction latency has exceeded 500ms for 5 minutes. Current p95: {{ "{{ $value | humanizeDuration }}" }}"
+
+        - alert: APIDown
+          expr: up{job="{{ .Release.Name }}-api"} == 0
+          for: 1m
+          labels:
+            severity: critical
+            team: infrastructure
+          annotations:
+            summary: "ML API is down"
+            description: "The SecureMLOps API target has been down for more than 1 minute."
+
+    # =====================================================================
+    # Pod Health Alerts
+    # =====================================================================
+    - name: securemlops-pod-health
+      rules:
+        - alert: PodCrashLooping
+          expr: |
+            rate(kube_pod_container_status_restarts_total{namespace="default",pod=~"{{ .Release.Name }}.*"}[15m]) * 60 * 15 > 3
+          for: 5m
+          labels:
+            severity: critical
+            team: infrastructure
+          annotations:
+            summary: "Pod {{ "{{ $labels.pod }}" }} is crash looping"
+            description: "Pod {{ "{{ $labels.pod }}" }} has restarted more than 3 times in the last 15 minutes."
+
+        - alert: PodNotReady
+          expr: |
+            kube_pod_status_ready{namespace="default",pod=~"{{ .Release.Name }}.*",condition="true"} == 0
+          for: 3m
+          labels:
+            severity: warning
+            team: infrastructure
+          annotations:
+            summary: "Pod {{ "{{ $labels.pod }}" }} is not ready"
+            description: "Pod {{ "{{ $labels.pod }}" }} has been in a non-ready state for more than 3 minutes."
+
+        - alert: HighMemoryUsage
+          expr: |
+            (
+              container_memory_working_set_bytes{namespace="default",pod=~"{{ .Release.Name }}.*",container="mlops-api"}
+              /
+              container_spec_memory_limit_bytes{namespace="default",pod=~"{{ .Release.Name }}.*",container="mlops-api"}
+            ) > 0.85
+          for: 5m
+          labels:
+            severity: warning
+            team: infrastructure
+          annotations:
+            summary: "High memory usage on {{ "{{ $labels.pod }}" }} (> 85%)"
+            description: "Container memory usage is at {{ "{{ $value | humanizePercentage }}" }} of the limit."
+
+        - alert: HighCPUUsage
+          expr: |
+            (
+              rate(container_cpu_usage_seconds_total{namespace="default",pod=~"{{ .Release.Name }}.*",container="mlops-api"}[5m])
+              /
+              container_spec_cpu_quota{namespace="default",pod=~"{{ .Release.Name }}.*",container="mlops-api"}
+              * container_spec_cpu_period{namespace="default",pod=~"{{ .Release.Name }}.*",container="mlops-api"}
+            ) > 0.85
+          for: 5m
+          labels:
+            severity: warning
+            team: infrastructure
+          annotations:
+            summary: "High CPU usage on {{ "{{ $labels.pod }}" }} (> 85%)"
+            description: "Container CPU usage is at {{ "{{ $value | humanizePercentage }}" }} of the limit."
+
+    # =====================================================================
+    # ML Model Alerts
+    # =====================================================================
+    - name: securemlops-ml-model
+      rules:
+        - alert: DataDriftDetected
+          expr: ml_drift_dataset_drift == 1
+          for: 1m
+          labels:
+            severity: warning
+            team: infrastructure
+          annotations:
+            summary: "Data drift detected in production predictions"
+            description: "Evidently AI has detected dataset drift. Review the drift report and consider retraining the model."
+            runbook: "Check drift dashboard in Grafana or run: kubectl create job --from=cronjob/{{ .Release.Name }}-drift-detection drift-investigate-$(date +%s)"
+
+        - alert: FeatureDriftCritical
+          expr: ml_drift_feature_drift_score > 0.8
+          for: 1m
+          labels:
+            severity: critical
+            team: infrastructure
+          annotations:
+            summary: "Critical feature drift on {{ "{{ $labels.feature }}" }}"
+            description: "Feature {{ "{{ $labels.feature }}" }} has a drift score of {{ "{{ $value }}" }} (threshold: 0.8). Model predictions may be unreliable."
+
+        - alert: ModelNotLoaded
+          expr: ml_model_loaded == 0
+          for: 2m
+          labels:
+            severity: critical
+            team: infrastructure
+          annotations:
+            summary: "ML model is not loaded"
+            description: "The prediction model has not been loaded for over 2 minutes. The API will return 503 errors."
+
+        - alert: PredictionVolumeAnomaly
+          expr: |
+            (
+              sum(rate(ml_predictions_total[5m]))
+              /
+              sum(rate(ml_predictions_total[1h] offset 1d))
+            ) > 3
+          for: 10m
+          labels:
+            severity: warning
+            team: infrastructure
+          annotations:
+            summary: "Unusual prediction volume spike (3x normal)"
+            description: "Prediction rate is 3x higher than the same period yesterday. This may indicate a traffic anomaly."
+
+    # =====================================================================
+    # Security Alerts
+    # =====================================================================
+    - name: securemlops-security
+      rules:
+        - alert: TrivyHighVulnerabilities
+          expr: security_trivy_high_vulnerabilities > 10
+          for: 5m
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "Trivy found more than 10 HIGH vulnerabilities"
+            description: "The latest Trivy scan found {{ "{{ $value }}" }} HIGH severity vulnerabilities. Review and remediate."
+
+        - alert: TrivyCriticalVulnerabilities
+          expr: security_trivy_critical_vulnerabilities > 0
+          for: 1m
+          labels:
+            severity: critical
+            team: security
+          annotations:
+            summary: "Trivy found CRITICAL vulnerabilities"
+            description: "The latest Trivy scan found {{ "{{ $value }}" }} CRITICAL vulnerabilities. Immediate remediation required."
+{{- end }}

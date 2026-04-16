@@ -1,0 +1,86 @@
+{{- if .Values.networkPolicy.enabled }}
+---
+# Default deny all ingress traffic in the namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-default-deny
+  labels:
+    app: {{ .Release.Name }}-api
+    project: secure-mlops
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ .Release.Name }}-api
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# Allow inbound traffic to API pods from the K8s service (NodePort/ClusterIP)
+# and from Prometheus for scraping metrics
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-allow-api-ingress
+  labels:
+    app: {{ .Release.Name }}-api
+    project: secure-mlops
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ .Release.Name }}-api
+  policyTypes:
+    - Ingress
+  ingress:
+    # Allow HTTP traffic from any source (NodePort service)
+    - ports:
+        - protocol: TCP
+          port: {{ .Values.service.targetPort }}
+    # Allow Prometheus scraping
+    - from:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+      ports:
+        - protocol: TCP
+          port: {{ .Values.metrics.port }}
+---
+# Allow API pods to make outbound connections:
+# - DNS resolution (kube-dns)
+# - Pushgateway (for drift metrics)
+# - External APIs if needed
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-allow-api-egress
+  labels:
+    app: {{ .Release.Name }}-api
+    project: secure-mlops
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ .Release.Name }}-api
+  policyTypes:
+    - Egress
+  egress:
+    # Allow DNS
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Allow connections to Pushgateway
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus-pushgateway
+      ports:
+        - protocol: TCP
+          port: 9091
+    # Allow connections to MLflow (if configured)
+    - ports:
+        - protocol: TCP
+          port: 5000
+{{- end }}

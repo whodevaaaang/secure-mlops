@@ -1,4 +1,4 @@
-{{- if not .Values.blueGreen.enabled }}
+{{- if and (not .Values.blueGreen.enabled) (not .Values.canary.enabled) }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -29,6 +29,8 @@ spec:
         prometheus.io/path: "{{ .Values.metrics.path }}"
       {{- end }}
     spec:
+      serviceAccountName: {{ .Release.Name }}-api
+      automountServiceAccountToken: false
       containers:
         - name: mlops-api
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -54,6 +56,11 @@ spec:
               port: {{ .Values.service.targetPort }}
             initialDelaySeconds: {{ .Values.health.readiness.initialDelaySeconds }}
             periodSeconds: {{ .Values.health.readiness.periodSeconds }}
+          {{- if .Values.secrets.enabled }}
+          envFrom:
+            - secretRef:
+                name: {{ .Release.Name }}-secrets
+          {{- end }}
           env:
             {{- range $key, $value := .Values.env }}
             - name: {{ $key }}

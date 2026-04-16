@@ -1,4 +1,4 @@
-{{- if not .Values.blueGreen.enabled }}
+{{- if and (not .Values.blueGreen.enabled) (not .Values.canary.enabled) }}
 apiVersion: v1
 kind: Service
 metadata:

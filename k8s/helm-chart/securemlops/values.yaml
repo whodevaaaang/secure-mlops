@@ -84,6 +84,46 @@ blueGreen:
       repository: secure-mlops-api
       tag: v2
 
+secrets:
+  enabled: false
+  data:
+    MLFLOW_TRACKING_URI: "http://mlflow:5000"
+    GRAFANA_ADMIN_PASSWORD: ""
+    DB_CONNECTION_STRING: ""
+
+networkPolicy:
+  enabled: false
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 8
+  targetCPU: 70               # Scale up when avg CPU exceeds 70%
+  targetMemory: 80             # Scale up when avg memory exceeds 80%
+  scaleUpStabilization: 30     # Wait 30s before scaling up
+  scaleDownStabilization: 300  # Wait 5min before scaling down
+  customMetrics:
+    enabled: false
+    targetRequestRate: "50"    # Target requests/sec per pod
+
+canary:
+  enabled: false
+  replicas: 1                   # Canary pod count (controls traffic %)
+  nodePort: 30082               # NodePort for canary-only testing
+  image:
+    repository: secure-mlops-api
+    tag: v2                     # New version under test
+  stable:
+    replicas: 2                 # Stable pod count
+    image:
+      repository: secure-mlops-api
+      tag: v1                   # Current production version
+  analysis:
+    errorThreshold: 0.05        # Max 5xx rate before auto-rollback
+    latencyThreshold: 500       # Max p95 latency (ms) before rollback
+    checkInterval: 30           # Seconds between analysis checks
+    checkCount: 10              # Number of checks before promotion
+
 security:
   trivy:
     enabled: true

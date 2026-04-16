@@ -61,6 +61,12 @@
 - Blue-green deploy: bash k8s/blue-green-switch.sh --deploy <tag>
 - Load test (headless): bash tests/load/run-benchmark.sh --users 50 --duration 60
 - Load test (web UI): locust -f tests/load/locustfile.py --host http://localhost:8080
+- Canary status: bash k8s/canary-promote.sh --status
+- Canary promote: bash k8s/canary-promote.sh --auto
+- Canary rollback: bash k8s/canary-promote.sh --rollback
+- MLflow model list: bash scripts/promote-model.sh --list
+- MLflow promote to prod: bash scripts/promote-model.sh --prod <version>
+- MLflow deploy prod model: bash scripts/promote-model.sh --deploy
 
 ## Git Workflow
 

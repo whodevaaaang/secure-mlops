@@ -1,5 +1,16 @@
 # SecureMLOps
 
+![Python](https://img.shields.io/badge/Python-3.10-blue?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green?logo=fastapi&logoColor=white)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-Minikube-326CE5?logo=kubernetes&logoColor=white)
+![Helm](https://img.shields.io/badge/Helm-3-0F1689?logo=helm&logoColor=white)
+![Jenkins](https://img.shields.io/badge/Jenkins-CI%2FCD-D24939?logo=jenkins&logoColor=white)
+![Prometheus](https://img.shields.io/badge/Prometheus-Monitoring-E6522C?logo=prometheus&logoColor=white)
+![Grafana](https://img.shields.io/badge/Grafana-Dashboards-F46800?logo=grafana&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-yellow)
+![Tests](https://img.shields.io/badge/Tests-7%20passing-brightgreen)
+![Security](https://img.shields.io/badge/Security-Trivy%20%7C%20Bandit%20%7C%20Gitleaks%20%7C%20OPA-blueviolet)
+
 A secure ML model delivery pipeline combining DevSecOps and MLOps practices. Built as a 12-week DevOps capstone project demonstrating end-to-end machine learning operations with security-first principles.
 
 ## Overview

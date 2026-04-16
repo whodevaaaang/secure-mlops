@@ -1,6 +1,6 @@
 """
 Loan Default Prediction - Model Training Script
-Trains a RandomForestClassifier and saves it with MLflow tracking.
+Trains a RandomForestClassifier and saves it with MLflow tracking and model registry.
 """
 
 import pandas as pd
@@ -11,6 +11,13 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 import joblib
 import json
 import os
+
+try:
+    import mlflow
+    import mlflow.sklearn
+    MLFLOW_AVAILABLE = True
+except ImportError:
+    MLFLOW_AVAILABLE = False
 
 # Generate synthetic loan dataset
 np.random.seed(42)
@@ -81,5 +88,49 @@ schema = {
 }
 with open("model/artifacts/schema.json", "w") as f:
     json.dump(schema, f, indent=2)
+
+# =====================================================================
+# MLflow Tracking & Model Registry
+# =====================================================================
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "")
+MODEL_NAME = "securemlops-loan-default"
+
+if MLFLOW_AVAILABLE and MLFLOW_TRACKING_URI:
+    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+    mlflow.set_experiment("securemlops-training")
+
+    with mlflow.start_run(run_name="loan-default-rf") as run:
+        # Log parameters
+        mlflow.log_params({
+            "n_estimators": 100,
+            "max_depth": 10,
+            "n_samples": n_samples,
+            "test_size": 0.2,
+            "random_state": 42,
+        })
+
+        # Log metrics
+        mlflow.log_metrics(metrics)
+
+        # Log model to registry
+        mlflow.sklearn.log_model(
+            model,
+            artifact_path="model",
+            registered_model_name=MODEL_NAME,
+        )
+
+        # Log artifacts
+        mlflow.log_artifact("model/artifacts/metrics.json")
+        mlflow.log_artifact("model/artifacts/schema.json")
+        mlflow.log_artifact("model/artifacts/test_data.csv")
+
+        print(f"\nMLflow run ID: {run.info.run_id}")
+        print(f"Model registered as: {MODEL_NAME}")
+        print(f"Tracking URI: {MLFLOW_TRACKING_URI}")
+else:
+    if not MLFLOW_AVAILABLE:
+        print("\nMLflow not installed — skipping model registry (local artifacts only)")
+    else:
+        print("\nMLFLOW_TRACKING_URI not set — skipping model registry (local artifacts only)")
 
 print("\nModel and artifacts saved to model/artifacts/")

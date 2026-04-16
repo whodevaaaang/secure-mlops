@@ -1,0 +1,53 @@
+---
+# ServiceAccount for the ML API pods
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Release.Name }}-api
+  labels:
+    app: {{ .Release.Name }}-api
+    project: secure-mlops
+automountServiceAccountToken: false
+---
+# ServiceAccount for drift detection CronJob
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Release.Name }}-drift-detector
+  labels:
+    app: {{ .Release.Name }}-drift
+    project: secure-mlops
+automountServiceAccountToken: false
+---
+# Role: drift detector needs to read pods and PVCs
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Release.Name }}-drift-detector
+  labels:
+    app: {{ .Release.Name }}-drift
+    project: secure-mlops
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list"]
+---
+# Bind the drift detector role to its service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Release.Name }}-drift-detector
+  labels:
+    app: {{ .Release.Name }}-drift
+    project: secure-mlops
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Release.Name }}-drift-detector
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Release.Name }}-drift-detector
+    namespace: {{ .Release.Namespace }}
