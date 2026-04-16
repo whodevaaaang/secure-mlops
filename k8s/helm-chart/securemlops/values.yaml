@@ -69,6 +69,21 @@ rollback:
   maxUnavailable: 0
   minReadySeconds: 30
 
+blueGreen:
+  enabled: false
+  activeSlot: blue            # "blue" or "green" — the slot serving live traffic
+  previewNodePort: 30081      # NodePort for testing the inactive slot
+  blue:
+    replicas: 2
+    image:
+      repository: secure-mlops-api
+      tag: v1
+  green:
+    replicas: 2
+    image:
+      repository: secure-mlops-api
+      tag: v2
+
 security:
   trivy:
     enabled: true

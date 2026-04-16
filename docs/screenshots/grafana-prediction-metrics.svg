@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="500" viewBox="0 0 900 500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16213e;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="900" height="500" fill="url(#bg)"/>
+  <!-- Header -->
+  <rect x="0" y="0" width="900" height="40" fill="#0f3460" opacity="0.8"/>
+  <text x="20" y="26" fill="#e94560" font-family="Arial,sans-serif" font-size="16" font-weight="bold">Grafana</text>
+  <text x="100" y="26" fill="#ffffff" font-family="Arial,sans-serif" font-size="14">/ SecureMLOps / Prediction Metrics</text>
+  <!-- Panel 1: Predictions by Outcome -->
+  <rect x="15" y="55" width="425" height="200" rx="4" fill="#1e2a3a" stroke="#2a3a4a" stroke-width="1"/>
+  <text x="30" y="78" fill="#cccccc" font-family="Arial,sans-serif" font-size="12">Predictions by Outcome</text>
+  <!-- Stacked bars -->
+  <rect x="60" y="130" width="40" height="105" fill="#73bf69"/>
+  <rect x="60" y="100" width="40" height="30" fill="#e94560"/>
+  <rect x="120" y="120" width="40" height="115" fill="#73bf69"/>
+  <rect x="120" y="95" width="40" height="25" fill="#e94560"/>
+  <rect x="180" y="125" width="40" height="110" fill="#73bf69"/>
+  <rect x="180" y="92" width="40" height="33" fill="#e94560"/>
+  <rect x="240" y="115" width="40" height="120" fill="#73bf69"/>
+  <rect x="240" y="90" width="40" height="25" fill="#e94560"/>
+  <rect x="300" y="110" width="40" height="125" fill="#73bf69"/>
+  <rect x="300" y="85" width="40" height="25" fill="#e94560"/>
+  <rect x="360" y="105" width="40" height="130" fill="#73bf69"/>
+  <rect x="360" y="80" width="40" height="25" fill="#e94560"/>
+  <text x="30" y="248" fill="#73bf69" font-family="Arial,sans-serif" font-size="10">NO DEFAULT: 82.3%</text>
+  <text x="200" y="248" fill="#e94560" font-family="Arial,sans-serif" font-size="10">DEFAULT: 17.7%</text>
+  <!-- Panel 2: Risk Distribution -->
+  <rect x="455" y="55" width="430" height="200" rx="4" fill="#1e2a3a" stroke="#2a3a4a" stroke-width="1"/>
+  <text x="470" y="78" fill="#cccccc" font-family="Arial,sans-serif" font-size="12">Risk Level Distribution</text>
+  <!-- Horizontal bars -->
+  <text x="475" y="120" fill="#aaaaaa" font-family="Arial,sans-serif" font-size="11">LOW</text>
+  <rect x="530" y="108" width="300" height="18" rx="2" fill="#73bf69"/>
+  <text x="840" y="122" fill="#cccccc" font-family="Arial,sans-serif" font-size="10">68%</text>
+  <text x="475" y="160" fill="#aaaaaa" font-family="Arial,sans-serif" font-size="11">MEDIUM</text>
+  <rect x="530" y="148" width="120" height="18" rx="2" fill="#f2cc0c"/>
+  <text x="660" y="162" fill="#cccccc" font-family="Arial,sans-serif" font-size="10">22%</text>
+  <text x="475" y="200" fill="#aaaaaa" font-family="Arial,sans-serif" font-size="11">HIGH</text>
+  <rect x="530" y="188" width="50" height="18" rx="2" fill="#e94560"/>
+  <text x="590" y="202" fill="#cccccc" font-family="Arial,sans-serif" font-size="10">10%</text>
+  <!-- Panel 3: Probability Distribution -->
+  <rect x="15" y="270" width="425" height="215" rx="4" fill="#1e2a3a" stroke="#2a3a4a" stroke-width="1"/>
+  <text x="30" y="293" fill="#cccccc" font-family="Arial,sans-serif" font-size="12">Default Probability Distribution</text>
+  <!-- Histogram bars -->
+  <rect x="45" y="320" width="30" height="140" rx="1" fill="#5794f2" opacity="0.8"/>
+  <rect x="80" y="340" width="30" height="120" rx="1" fill="#5794f2" opacity="0.8"/>
+  <rect x="115" y="370" width="30" height="90" rx="1" fill="#5794f2" opacity="0.8"/>
+  <rect x="150" y="390" width="30" height="70" rx="1" fill="#5794f2" opacity="0.8"/>
+  <rect x="185" y="400" width="30" height="60" rx="1" fill="#5794f2" opacity="0.8"/>
+  <rect x="220" y="410" width="30" height="50" rx="1" fill="#f2cc0c" opacity="0.8"/>
+  <rect x="255" y="420" width="30" height="40" rx="1" fill="#f2cc0c" opacity="0.8"/>
+  <rect x="290" y="430" width="30" height="30" rx="1" fill="#e94560" opacity="0.8"/>
+  <rect x="325" y="440" width="30" height="20" rx="1" fill="#e94560" opacity="0.8"/>
+  <rect x="360" y="445" width="30" height="15" rx="1" fill="#e94560" opacity="0.8"/>
+  <text x="40" y="475" fill="#666666" font-family="Arial,sans-serif" font-size="9">0.0  0.1  0.2  0.3  0.4  0.5  0.6  0.7  0.8  0.9  1.0</text>
+  <!-- Panel 4: Inference Latency -->
+  <rect x="455" y="270" width="430" height="215" rx="4" fill="#1e2a3a" stroke="#2a3a4a" stroke-width="1"/>
+  <text x="470" y="293" fill="#cccccc" font-family="Arial,sans-serif" font-size="12">Inference Latency (ms)</text>
+  <polyline points="475,430 520,420 570,415 620,425 670,410 720,418 770,405 830,400" fill="none" stroke="#b877d9" stroke-width="2"/>
+  <text x="470" y="475" fill="#b877d9" font-family="Arial,sans-serif" font-size="10">avg: 2.8ms</text>
+  <text x="570" y="475" fill="#888888" font-family="Arial,sans-serif" font-size="10">p95: 5.1ms</text>
+  <text x="670" y="475" fill="#888888" font-family="Arial,sans-serif" font-size="10">p99: 8.3ms</text>
+</svg>

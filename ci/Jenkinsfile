@@ -5,6 +5,10 @@
 pipeline {
     agent any
 
+    parameters {
+        choice(name: 'DEPLOY_STRATEGY', choices: ['rolling', 'blue-green'], description: 'Deployment strategy')
+    }
+
     environment {
         IMAGE_NAME     = 'secure-mlops-api'
         IMAGE_TAG      = "${env.BUILD_NUMBER ?: 'latest'}"
@@ -266,6 +270,31 @@ pipeline {
                             --wait \
                             --timeout 5m \
                             --atomic
+                    '''
+                }
+            }
+        }
+
+        // =====================================================================
+        // Stage 9b: Blue-Green Deploy (alternative to rolling update)
+        // Deploys new image to inactive slot; switch traffic manually after
+        // verifying via the preview service.
+        // =====================================================================
+        stage('Blue-Green Deploy') {
+            when {
+                allOf {
+                    anyOf {
+                        branch 'main'
+                        branch 'develop'
+                    }
+                    expression { return params.DEPLOY_STRATEGY == 'blue-green' }
+                }
+            }
+            steps {
+                script {
+                    sh '''
+                        echo "Deploying to inactive blue-green slot..."
+                        bash k8s/blue-green-switch.sh --deploy ${IMAGE_TAG}
                     '''
                 }
             }

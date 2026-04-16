@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="500" viewBox="0 0 900 500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16213e;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="900" height="500" fill="url(#bg)"/>
+  <!-- Header -->
+  <rect x="0" y="0" width="900" height="40" fill="#0f3460" opacity="0.8"/>
+  <text x="20" y="26" fill="#e94560" font-family="Arial,sans-serif" font-size="16" font-weight="bold">Grafana</text>
+  <text x="100" y="26" fill="#ffffff" font-family="Arial,sans-serif" font-size="14">/ SecureMLOps / System Resources</text>
+  <!-- Panel 1: CPU Usage -->
+  <rect x="15" y="55" width="425" height="200" rx="4" fill="#1e2a3a" stroke="#2a3a4a" stroke-width="1"/>
+  <text x="30" y="78" fill="#cccccc" font-family="Arial,sans-serif" font-size="12">Pod CPU Usage vs Limits</text>
+  <rect x="35" y="95" width="385" height="1" fill="#2a3a4a"/>
+  <text x="35" y="90" fill="#666666" font-family="Arial,sans-serif" font-size="9">500m (limit)</text>
+  <polyline points="35,220 80,215 130,200 180,210 230,195 280,205 330,190 380,200 420,192" fill="none" stroke="#5794f2" stroke-width="2"/>
+  <polyline points="35,225 80,220 130,208 180,218 230,200 280,212 330,198 380,208 420,200" fill="none" stroke="#73bf69" stroke-width="2"/>
+  <text x="30" y="248" fill="#5794f2" font-family="Arial,sans-serif" font-size="10">Pod 1: 180m</text>
+  <text x="150" y="248" fill="#73bf69" font-family="Arial,sans-serif" font-size="10">Pod 2: 165m</text>
+  <!-- Panel 2: Memory Usage -->
+  <rect x="455" y="55" width="430" height="200" rx="4" fill="#1e2a3a" stroke="#2a3a4a" stroke-width="1"/>
+  <text x="470" y="78" fill="#cccccc" font-family="Arial,sans-serif" font-size="12">Pod Memory Usage vs Limits</text>
+  <rect x="475" y="110" width="390" height="1" fill="#2a3a4a"/>
+  <text x="475" y="105" fill="#666666" font-family="Arial,sans-serif" font-size="9">512Mi (limit)</text>
+  <polyline points="475,200 520,195 570,190 620,192 670,188 720,190 770,185 830,182" fill="none" stroke="#ff9830" stroke-width="2"/>
+  <polyline points="475,205 520,200 570,195 620,198 670,192 720,196 770,190 830,188" fill="none" stroke="#b877d9" stroke-width="2"/>
+  <text x="470" y="248" fill="#ff9830" font-family="Arial,sans-serif" font-size="10">Pod 1: 285Mi</text>
+  <text x="600" y="248" fill="#b877d9" font-family="Arial,sans-serif" font-size="10">Pod 2: 272Mi</text>
+  <!-- Panel 3: Ready Replicas -->
+  <rect x="15" y="270" width="210" height="215" rx="4" fill="#1e2a3a" stroke="#2a3a4a" stroke-width="1"/>
+  <text x="30" y="293" fill="#cccccc" font-family="Arial,sans-serif" font-size="12">Ready Replicas</text>
+  <text x="75" y="395" fill="#73bf69" font-family="Arial,sans-serif" font-size="56" font-weight="bold">2/2</text>
+  <text x="80" y="425" fill="#888888" font-family="Arial,sans-serif" font-size="11">all pods healthy</text>
+  <!-- Panel 4: Restarts -->
+  <rect x="240" y="270" width="210" height="215" rx="4" fill="#1e2a3a" stroke="#2a3a4a" stroke-width="1"/>
+  <text x="255" y="293" fill="#cccccc" font-family="Arial,sans-serif" font-size="12">Pod Restarts (24h)</text>
+  <text x="320" y="400" fill="#73bf69" font-family="Arial,sans-serif" font-size="56" font-weight="bold">0</text>
+  <text x="300" y="430" fill="#888888" font-family="Arial,sans-serif" font-size="11">no restarts</text>
+  <!-- Panel 5: Network I/O -->
+  <rect x="465" y="270" width="420" height="215" rx="4" fill="#1e2a3a" stroke="#2a3a4a" stroke-width="1"/>
+  <text x="480" y="293" fill="#cccccc" font-family="Arial,sans-serif" font-size="12">Network I/O (bytes/sec)</text>
+  <polyline points="485,420 530,400 580,410 630,380 680,390 730,370 780,375 830,360 865,355" fill="none" stroke="#5794f2" stroke-width="2"/>
+  <polyline points="485,450 530,440 580,445 630,430 680,435 730,425 780,428 830,420 865,418" fill="none" stroke="#ff9830" stroke-width="2"/>
+  <text x="480" y="475" fill="#5794f2" font-family="Arial,sans-serif" font-size="10">Received: 24.5 KB/s</text>
+  <text x="650" y="475" fill="#ff9830" font-family="Arial,sans-serif" font-size="10">Transmitted: 18.2 KB/s</text>
+</svg>

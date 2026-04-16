@@ -1,0 +1,162 @@
+{{- if .Values.blueGreen.enabled }}
+---
+# Blue Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-blue
+  labels:
+    app: {{ .Release.Name }}-api
+    slot: blue
+    project: secure-mlops
+spec:
+  replicas: {{ .Values.blueGreen.blue.replicas }}
+  revisionHistoryLimit: {{ .Values.rollback.revisionHistoryLimit }}
+  minReadySeconds: {{ .Values.rollback.minReadySeconds }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-api
+      slot: blue
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-api
+        slot: blue
+      {{- if .Values.metrics.enabled }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.metrics.port }}"
+        prometheus.io/path: "{{ .Values.metrics.path }}"
+      {{- end }}
+    spec:
+      containers:
+        - name: mlops-api
+          image: "{{ .Values.blueGreen.blue.image.repository }}:{{ .Values.blueGreen.blue.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+          resources:
+            requests:
+              memory: {{ .Values.resources.requests.memory }}
+              cpu: {{ .Values.resources.requests.cpu }}
+            limits:
+              memory: {{ .Values.resources.limits.memory }}
+              cpu: {{ .Values.resources.limits.cpu }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.health.liveness.path }}
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: {{ .Values.health.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.health.liveness.periodSeconds }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.health.readiness.path }}
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: {{ .Values.health.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.health.readiness.periodSeconds }}
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            - name: DEPLOYMENT_SLOT
+              value: "blue"
+            {{- if .Values.drift.enabled }}
+            - name: PREDICTION_LOG_DIR
+              value: "/data/predictions"
+          volumeMounts:
+            - name: prediction-data
+              mountPath: /data/predictions
+            {{- end }}
+      {{- if .Values.drift.enabled }}
+      volumes:
+        - name: prediction-data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-prediction-data
+      {{- end }}
+---
+# Green Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-green
+  labels:
+    app: {{ .Release.Name }}-api
+    slot: green
+    project: secure-mlops
+spec:
+  replicas: {{ .Values.blueGreen.green.replicas }}
+  revisionHistoryLimit: {{ .Values.rollback.revisionHistoryLimit }}
+  minReadySeconds: {{ .Values.rollback.minReadySeconds }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-api
+      slot: green
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-api
+        slot: green
+      {{- if .Values.metrics.enabled }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.metrics.port }}"
+        prometheus.io/path: "{{ .Values.metrics.path }}"
+      {{- end }}
+    spec:
+      containers:
+        - name: mlops-api
+          image: "{{ .Values.blueGreen.green.image.repository }}:{{ .Values.blueGreen.green.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+          resources:
+            requests:
+              memory: {{ .Values.resources.requests.memory }}
+              cpu: {{ .Values.resources.requests.cpu }}
+            limits:
+              memory: {{ .Values.resources.limits.memory }}
+              cpu: {{ .Values.resources.limits.cpu }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.health.liveness.path }}
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: {{ .Values.health.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.health.liveness.periodSeconds }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.health.readiness.path }}
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: {{ .Values.health.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.health.readiness.periodSeconds }}
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            - name: DEPLOYMENT_SLOT
+              value: "green"
+            {{- if .Values.drift.enabled }}
+            - name: PREDICTION_LOG_DIR
+              value: "/data/predictions"
+          volumeMounts:
+            - name: prediction-data
+              mountPath: /data/predictions
+            {{- end }}
+      {{- if .Values.drift.enabled }}
+      volumes:
+        - name: prediction-data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-prediction-data
+      {{- end }}
+{{- end }}
