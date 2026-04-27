@@ -1,0 +1,344 @@
+// SecureMLOps CI/CD Pipeline
+// 10-stage pipeline: lint, test, security scan, build, deploy, verify
+// Requires: Docker, Python 3.10, Helm, kubectl, Minikube, Trivy, conftest, Gitleaks, Bandit
+
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME     = 'secure-mlops-api'
+        IMAGE_TAG      = "${env.BUILD_NUMBER ?: 'latest'}"
+        HELM_RELEASE   = 'securemlops'
+        HELM_CHART     = 'k8s/helm-chart/securemlops'
+        SONAR_HOST_URL = credentials('sonarqube-url')      // Jenkins credential ID
+        SONAR_TOKEN    = credentials('sonarqube-token')     // Jenkins credential ID
+        APP_DIR        = 'ml-app'
+        DEPLOY_TIMEOUT = '120'  // seconds for health check
+    }
+
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        timestamps()
+    }
+
+    stages {
+        // =====================================================================
+        // Stage 1: Checkout
+        // =====================================================================
+        stage('Checkout') {
+            steps {
+                checkout scm
+                sh 'echo "Branch: ${GIT_BRANCH}"'
+                sh 'echo "Commit: ${GIT_COMMIT}"'
+            }
+        }
+
+        // =====================================================================
+        // Stage 2: Install Dependencies
+        // =====================================================================
+        stage('Install Dependencies') {
+            steps {
+                dir("${APP_DIR}") {
+                    sh '''
+                        python3 -m venv venv
+                        . venv/bin/activate
+                        pip install --upgrade pip
+                        pip install -r requirements.txt
+                        pip install flake8 bandit
+                    '''
+                }
+            }
+        }
+
+        // =====================================================================
+        // Stage 3: Lint (flake8)
+        // =====================================================================
+        stage('Lint') {
+            steps {
+                dir("${APP_DIR}") {
+                    sh '''
+                        . venv/bin/activate
+                        echo "Running flake8 lint checks..."
+                        flake8 api/ tests/ \
+                            --max-line-length=120 \
+                            --exclude=venv,__pycache__ \
+                            --statistics \
+                            --count \
+                            --show-source
+                    '''
+                }
+            }
+        }
+
+        // =====================================================================
+        // Stage 4: Unit Tests (pytest)
+        // =====================================================================
+        stage('Unit Tests') {
+            steps {
+                dir("${APP_DIR}") {
+                    sh '''
+                        . venv/bin/activate
+                        echo "Running unit tests..."
+                        pytest tests/test_api.py -v \
+                            --tb=short \
+                            --junitxml=test-results.xml
+                    '''
+                }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: "${APP_DIR}/test-results.xml"
+                }
+            }
+        }
+
+        // =====================================================================
+        // Stage 5: Security Scan (Gitleaks + Bandit)
+        // =====================================================================
+        stage('Security Scan') {
+            parallel {
+                stage('Gitleaks') {
+                    steps {
+                        sh '''
+                            echo "Scanning for secrets with Gitleaks..."
+                            gitleaks detect \
+                                --source=. \
+                                --config=security/gitleaks.toml \
+                                --report-path=security/reports/gitleaks-report.json \
+                                --report-format=json \
+                                --verbose
+                        '''
+                    }
+                }
+                stage('Bandit') {
+                    steps {
+                        dir("${APP_DIR}") {
+                            sh '''
+                                . venv/bin/activate
+                                echo "Running Bandit security analysis..."
+                                bandit -r api/ \
+                                    -f json \
+                                    -o ../security/reports/bandit-report.json \
+                                    --severity-level medium \
+                                    --confidence-level medium \
+                                    || true
+                                bandit -r api/ \
+                                    -f screen \
+                                    --severity-level medium \
+                                    --confidence-level medium
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+
+        // =====================================================================
+        // Stage 6: SonarQube Analysis
+        // =====================================================================
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh '''
+                        echo "Running SonarQube analysis..."
+                        sonar-scanner \
+                            -Dsonar.projectKey=securemlops \
+                            -Dsonar.projectName="SecureMLOps" \
+                            -Dsonar.projectVersion=${BUILD_NUMBER} \
+                            -Dsonar.sources=${APP_DIR}/api \
+                            -Dsonar.tests=${APP_DIR}/tests \
+                            -Dsonar.language=py \
+                            -Dsonar.python.version=3.10 \
+                            -Dsonar.sourceEncoding=UTF-8 \
+                            -Dsonar.host.url=${SONAR_HOST_URL} \
+                            -Dsonar.login=${SONAR_TOKEN} \
+                            -Dsonar.python.xunit.reportPath=${APP_DIR}/test-results.xml
+                    '''
+                }
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        // =====================================================================
+        // Stage 7: Docker Build + Trivy Scan
+        // =====================================================================
+        stage('Docker Build + Trivy Scan') {
+            steps {
+                script {
+                    // Point docker to Minikube's daemon
+                    sh 'eval $(minikube docker-env) && docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ${APP_DIR}/'
+
+                    // Tag as latest for Helm chart compatibility
+                    sh 'eval $(minikube docker-env) && docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:v1'
+
+                    // Run Trivy vulnerability scan
+                    sh '''
+                        echo "Scanning image with Trivy..."
+                        trivy image \
+                            --config security/trivy-config.yaml \
+                            --severity CRITICAL,HIGH \
+                            --exit-code 1 \
+                            --format table \
+                            ${IMAGE_NAME}:${IMAGE_TAG}
+                    '''
+
+                    // Generate JSON report for metrics export
+                    sh '''
+                        mkdir -p security/reports
+                        trivy image \
+                            --config security/trivy-config.yaml \
+                            --exit-code 0 \
+                            --format json \
+                            --output security/reports/trivy-report.json \
+                            ${IMAGE_NAME}:${IMAGE_TAG}
+                    '''
+                }
+            }
+        }
+
+        // =====================================================================
+        // Stage 8: OPA Policy Check
+        // =====================================================================
+        stage('OPA Policy Check') {
+            steps {
+                sh '''
+                    echo "Validating K8s manifests against OPA policies..."
+
+                    # Render Helm templates
+                    RENDERED_DIR=$(mktemp -d)
+                    helm template ${HELM_RELEASE} ${HELM_CHART} --output-dir ${RENDERED_DIR}
+
+                    FAILURES=0
+
+                    # Check each rendered template
+                    for manifest in $(find ${RENDERED_DIR} -name "*.yaml" -type f); do
+                        echo "  Checking: $(basename $manifest)"
+                        if ! conftest test "$manifest" \
+                            --policy security/opa-policies \
+                            --no-color; then
+                            FAILURES=$((FAILURES + 1))
+                        fi
+                    done
+
+                    # Also check raw manifests
+                    for manifest in k8s/manifests/*.yaml; do
+                        echo "  Checking: $(basename $manifest)"
+                        if ! conftest test "$manifest" \
+                            --policy security/opa-policies \
+                            --no-color; then
+                            FAILURES=$((FAILURES + 1))
+                        fi
+                    done
+
+                    rm -rf ${RENDERED_DIR}
+
+                    if [ "$FAILURES" -gt 0 ]; then
+                        echo "OPA POLICY CHECK FAILED: ${FAILURES} violation(s)"
+                        exit 1
+                    fi
+                    echo "OPA POLICY CHECK PASSED"
+                '''
+            }
+        }
+
+        // =====================================================================
+        // Stage 9: Helm Deploy to K8s
+        // =====================================================================
+        stage('Helm Deploy') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'develop'
+                }
+            }
+            steps {
+                script {
+                    sh '''
+                        echo "Deploying to Kubernetes via Helm..."
+                        helm upgrade --install ${HELM_RELEASE} ${HELM_CHART} \
+                            --set image.repository=${IMAGE_NAME} \
+                            --set image.tag=v1 \
+                            --set image.pullPolicy=Never \
+                            --wait \
+                            --timeout 5m \
+                            --atomic
+                    '''
+                }
+            }
+        }
+
+        // =====================================================================
+        // Stage 10: Post-deploy Health Verification
+        // =====================================================================
+        stage('Health Verification') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'develop'
+                }
+            }
+            steps {
+                sh '''
+                    echo "Verifying deployment health..."
+
+                    # Wait for rollout to complete
+                    kubectl rollout status deployment/${HELM_RELEASE}-deployment \
+                        --timeout=${DEPLOY_TIMEOUT}s
+
+                    # Check pod readiness
+                    READY_PODS=$(kubectl get pods -l app=${HELM_RELEASE}-api \
+                        -o jsonpath='{.items[*].status.conditions[?(@.type=="Ready")].status}' \
+                        | tr ' ' '\n' | grep -c "True" || echo 0)
+                    DESIRED_PODS=$(kubectl get deployment ${HELM_RELEASE}-deployment \
+                        -o jsonpath='{.spec.replicas}')
+
+                    echo "Ready pods: ${READY_PODS}/${DESIRED_PODS}"
+
+                    if [ "$READY_PODS" -lt "$DESIRED_PODS" ]; then
+                        echo "HEALTH CHECK FAILED: Not all pods are ready"
+                        kubectl get pods -l app=${HELM_RELEASE}-api
+                        exit 1
+                    fi
+
+                    # Test /health endpoint via port-forward
+                    kubectl port-forward service/${HELM_RELEASE}-service 18080:80 &
+                    PF_PID=$!
+                    sleep 3
+
+                    HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+                        http://localhost:18080/health 2>/dev/null || echo "000")
+
+                    kill $PF_PID 2>/dev/null || true
+
+                    if [ "$HEALTH_STATUS" = "200" ]; then
+                        echo "HEALTH CHECK PASSED: API is healthy (HTTP ${HEALTH_STATUS})"
+                    else
+                        echo "HEALTH CHECK FAILED: API returned HTTP ${HEALTH_STATUS}"
+                        exit 1
+                    fi
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            // Archive security and test reports
+            archiveArtifacts artifacts: 'security/reports/**/*', allowEmptyArchive: true
+            archiveArtifacts artifacts: "${APP_DIR}/test-results.xml", allowEmptyArchive: true
+        }
+        success {
+            echo "Pipeline completed successfully!"
+        }
+        failure {
+            echo "Pipeline failed. Check stage logs for details."
+        }
+        cleanup {
+            cleanWs()
+        }
+    }
+}

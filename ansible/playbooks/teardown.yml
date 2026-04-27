@@ -1,0 +1,44 @@
+---
+# Teardown Playbook
+# Removes the Helm release and optionally stops Minikube
+#
+# Usage:
+#   cd ansible
+#   ansible-playbook playbooks/teardown.yml
+#
+# To also stop Minikube:
+#   ansible-playbook playbooks/teardown.yml -e stop_minikube=true
+
+- name: Teardown SecureMLOps Environment
+  hosts: localhost
+  gather_facts: false
+  vars:
+    stop_minikube: false
+
+  tasks:
+    - name: Check if Helm release exists
+      command: helm status {{ helm_release_name }}
+      register: helm_status
+      changed_when: false
+      failed_when: false
+
+    - name: Uninstall Helm release
+      command: helm uninstall {{ helm_release_name }} --namespace {{ k8s_namespace }}
+      when: helm_status.rc == 0
+
+    - name: Wait for pods to terminate
+      command: kubectl wait --for=delete pods -l app={{ helm_release_name }}-api --timeout=60s
+      changed_when: false
+      failed_when: false
+      when: helm_status.rc == 0
+
+    - name: Stop Minikube
+      command: minikube stop
+      when: stop_minikube | bool
+      register: minikube_stop
+
+    - name: Teardown complete
+      debug:
+        msg:
+          - "Helm release '{{ helm_release_name }}': {{ 'Removed' if helm_status.rc == 0 else 'Not found (already removed)' }}"
+          - "Minikube: {{ 'Stopped' if (stop_minikube | bool) else 'Still running (use -e stop_minikube=true to stop)' }}"

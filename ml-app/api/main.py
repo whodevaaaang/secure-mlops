@@ -5,18 +5,52 @@ FastAPI application serving the trained model.
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
+from prometheus_fastapi_instrumentator import Instrumentator
+from prometheus_client import Counter, Histogram, Gauge
+import csv
 import joblib
 import json
+import logging
 import time
 import os
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="SecureMLOps - Loan Default Prediction API",
     description="Predicts whether a loan applicant is likely to default",
     version="1.0.0",
 )
+
+# Prometheus metrics
+PREDICTION_COUNT = Counter(
+    "ml_predictions_total",
+    "Total number of predictions",
+    ["prediction", "risk_level"],
+)
+PREDICTION_LATENCY = Histogram(
+    "ml_prediction_duration_seconds",
+    "Time spent processing prediction requests",
+    buckets=[0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0],
+)
+DEFAULT_PROBABILITY = Histogram(
+    "ml_default_probability",
+    "Distribution of predicted default probabilities",
+    buckets=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+)
+MODEL_LOADED = Gauge(
+    "ml_model_loaded",
+    "Whether the ML model is loaded (1=yes, 0=no)",
+)
+
+# Instrument FastAPI with default HTTP metrics + expose /metrics endpoint
+Instrumentator(
+    should_group_status_codes=True,
+    should_ignore_untemplated=True,
+    excluded_handlers=["/health", "/ready", "/metrics"],
+).instrument(app).expose(app, include_in_schema=False)
 
 # Load model and schema at startup
 _dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -26,13 +60,34 @@ SCHEMA_PATH = os.getenv("SCHEMA_PATH", os.path.join(_dir, "model", "artifacts", 
 model = None
 schema = None
 
+# Prediction logging for drift detection
+PREDICTION_LOG_DIR = os.getenv("PREDICTION_LOG_DIR", os.path.join(_dir, "data", "predictions"))
+PREDICTION_LOG_FIELDS = ["age", "income", "loan_amount", "credit_score", "employment_years", "num_existing_loans"]
+
+
+def log_prediction(input_data: dict):
+    """Append prediction input to CSV for drift detection."""
+    try:
+        os.makedirs(PREDICTION_LOG_DIR, exist_ok=True)
+        log_path = os.path.join(PREDICTION_LOG_DIR, "current.csv")
+        file_exists = os.path.exists(log_path)
+        with open(log_path, "a", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=PREDICTION_LOG_FIELDS)
+            if not file_exists:
+                writer.writeheader()
+            writer.writerow({k: input_data[k] for k in PREDICTION_LOG_FIELDS})
+    except Exception as e:
+        logger.warning("Failed to log prediction for drift detection: %s", e)
+
 @app.on_event("startup")
 def load_model():
     global model, schema
     if os.path.exists(MODEL_PATH):
         model = joblib.load(MODEL_PATH)
+        MODEL_LOADED.set(1)
         print(f"Model loaded from {MODEL_PATH}")
     else:
+        MODEL_LOADED.set(0)
         print(f"WARNING: Model not found at {MODEL_PATH}")
 
     if os.path.exists(SCHEMA_PATH):
@@ -110,8 +165,18 @@ def predict(application: LoanApplication):
     else:
         risk_level = "HIGH"
 
+    prediction_label = "DEFAULT" if prediction == 1 else "NO DEFAULT"
+
+    # Log input for drift detection
+    log_prediction(input_data.iloc[0].to_dict())
+
+    # Record custom Prometheus metrics
+    PREDICTION_COUNT.labels(prediction=prediction_label, risk_level=risk_level).inc()
+    PREDICTION_LATENCY.observe(inference_time / 1000)  # convert ms to seconds
+    DEFAULT_PROBABILITY.observe(default_prob)
+
     return PredictionResponse(
-        prediction="DEFAULT" if prediction == 1 else "NO DEFAULT",
+        prediction=prediction_label,
         default_probability=default_prob,
         risk_level=risk_level,
         inference_time_ms=inference_time,

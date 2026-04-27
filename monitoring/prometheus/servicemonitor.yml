@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: securemlops-api-monitor
+  labels:
+    app: securemlops-api
+    release: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: securemlops-api
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
+  namespaceSelector:
+    matchNames:
+      - default

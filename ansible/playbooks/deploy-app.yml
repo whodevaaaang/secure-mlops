@@ -1,0 +1,25 @@
+---
+# Deploy/Update Application Playbook
+# Builds and deploys (or upgrades) the ML API on an existing Minikube cluster
+#
+# Usage:
+#   cd ansible
+#   ansible-playbook playbooks/deploy-app.yml
+#
+# With custom image tag:
+#   ansible-playbook playbooks/deploy-app.yml -e docker_image_tag=v2
+
+- name: Deploy SecureMLOps Application
+  hosts: localhost
+  gather_facts: false
+
+  pre_tasks:
+    - name: Verify Minikube is running
+      command: minikube status --format='{{`{{ .Host }}`}}'
+      register: minikube_check
+      changed_when: false
+      failed_when: minikube_check.stdout != 'Running'
+
+  roles:
+    - role: app_deploy
+      tags: [deploy]

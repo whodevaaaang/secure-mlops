@@ -1,12 +1,45 @@
+# Gitleaks configuration for SecureMLOps
+# Detects secrets, credentials, and API keys in the repository
+# Docs: https://github.com/gitleaks/gitleaks
+
+title = "SecureMLOps Gitleaks Config"
+
 [extend]
+# Use the default gitleaks rules as a baseline
 useDefault = true
 
+# Custom rules for ML/DevOps specific patterns
+[[rules]]
+id = "mlflow-tracking-token"
+description = "MLflow Tracking Token"
+regex = '''(?i)mlflow[_-]?tracking[_-]?token\s*[=:]\s*['"]?[\w-]{20,}'''
+tags = ["mlflow", "token"]
+
+[[rules]]
+id = "database-connection-string"
+description = "Database Connection String"
+regex = '''(?i)(postgres|mysql|mongodb)://[^:]+:[^@]+@[^/]+/\w+'''
+tags = ["database", "connection"]
+
+[[rules]]
+id = "grafana-api-key"
+description = "Grafana API Key"
+regex = '''(?i)grafana[_-]?api[_-]?key\s*[=:]\s*['"]?eyJ[\w-]+'''
+tags = ["grafana", "api-key"]
+
+# Paths to exclude from scanning
 [allowlist]
 description = "Ignore generated test fixtures and documentation-only secrets"
 paths = [
-  '''ml-app/model/artifacts/test_data\.csv''',
-  '''ml-app/model/artifacts/test_labels\.csv''',
-  '''security/reports/generated/'''
+    '''\.trivyignore$''',
+    '''security/reports/.*''',
+    '''security/reports/generated/''',
+    '''ml-app/data/.*''',
+    '''ml-app/model/artifacts/test_data\.csv''',
+    '''ml-app/model/artifacts/test_labels\.csv''',
+    '''\.git/.*''',
+    '''venv/.*''',
+    '''__pycache__/.*''',
 ]
 
 regexes = [
