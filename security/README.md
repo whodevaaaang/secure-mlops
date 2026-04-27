@@ -1,63 +1,24 @@
-# Security Workstream
+# DevSecOps Security Tooling
 
-This directory contains the DevSecOps deliverables for the `feature/security-scanning` branch.
+This document describes the five security tools integrated into the SecureMLOps pipeline. Each tool catches a different category of issue, providing defense in depth.
 
-## Scope
+## 1. Gitleaks
+Scans the entire Git history for accidentally committed secrets such as API keys, passwords, and tokens. Even if a secret is later removed from the code, it remains in Git history — Gitleaks finds these. Configured via `security/gitleaks.toml`.
 
-- Secret detection with Gitleaks
-- Python static analysis with Bandit
-- Container vulnerability scanning with Trivy
-- Admission-style policy checks with OPA/Rego
-- JSON and HTML report generation for scan outputs
+## 2. Bandit
+Python-specific security linter. Analyzes our source code for insecure patterns including hardcoded credentials, use of insecure hash functions (MD5, SHA1), SQL injection risks, and dangerous functions like `eval()` and `exec()`. Each finding is assigned a severity: LOW, MEDIUM, or HIGH.
 
-## Files
+## 3. SonarQube
+Static code analysis platform that runs in Docker. Performs deep analysis covering code quality (bugs, complexity, code smells), security hotspots, and test coverage. Enforces a quality gate that blocks deployment if code does not meet defined thresholds.
 
-- `gitleaks.toml`: repository secret scanning rules
-- `bandit.yml`: Python security scan configuration for `ml-app/`
-- `trivy-config.yaml`: container vulnerability scan configuration
-- `opa-policies/`: Rego policies for deployment and compliance checks
+## 4. Trivy
+Container image vulnerability scanner. Checks both OS packages and application libraries inside our Docker image against the CVE (Common Vulnerabilities and Exposures) database. The pipeline is configured to fail if any CRITICAL or HIGH severity CVEs are detected.
 
-## Recommended Scan Commands
+## 5. OPA (Open Policy Agent)
+Policy engine that validates Kubernetes manifests against rules written in Rego. We enforce 12 policies covering: non-root containers, required resource limits, required liveness and readiness probes, no use of `hostPort`, and other production-readiness checks. Any policy violation blocks deployment.
 
-### Gitleaks
+## Pipeline Integration
+All five tools run automatically inside the Jenkins CI/CD pipeline. Gitleaks and Bandit run in parallel during stage 5. SonarQube runs in stage 6 with a quality gate. Trivy scans the built image in stage 8. OPA validates manifests in stage 9. Failure at any stage blocks deployment.
 
-```bash
-docker run --rm \
-  -v "$PWD:/repo" \
-  ghcr.io/gitleaks/gitleaks:latest detect \
-  --source=/repo \
-  --config=/repo/security/gitleaks.toml \
-  --report-format=json \
-  --report-path=/repo/security/reports/generated/gitleaks-report.json
-```
-
-### Bandit
-
-```bash
-python3 -m pip install bandit
-bandit -r ml-app -c security/bandit.yml -f json -o security/reports/generated/bandit-report.json
-```
-
-### Trivy
-
-```bash
-docker build -t securemlops-api:local ./ml-app
-docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-  -v "$PWD:/workdir" \
-  aquasec/trivy image \
-  --config /workdir/security/trivy-config.yaml \
-  securemlops-api:local
-```
-
-### OPA
-
-```bash
-opa eval --format pretty \
-  --data security/opa-policies \
-  --input security/examples/policy-input.json \
-  "data.securemlops.security.deny"
-```
-
-## Reporting
-
-Use `scripts/generate_security_report.py` to combine scan results into JSON and HTML summaries under `security/reports/generated/`.
+## Runtime Hardening
+Beyond pipeline scans, we also enforce runtime hardening: RBAC for least-privilege access, network policies for pod-to-pod traffic control, SealedSecrets for safe secret management in Git, and non-root user enforcement on all containers.
