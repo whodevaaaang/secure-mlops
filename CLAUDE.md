@@ -18,8 +18,11 @@
 - Week 3 COMPLETE: Evidently AI drift detection (CronJob, Pushgateway, drift dashboard), prediction logging
 - Week 3 COMPLETE: Rollback mechanism (rolling update strategy, rollback.sh, revision history)
 - Week 3 COMPLETE: Architecture diagrams (3 Mermaid diagrams), comprehensive README
-- Week 4 IN PROGRESS: Jenkins CI/CD pipeline (10 stages), docker-compose.jenkins.yml for local Jenkins + SonarQube
-- Week 4 IN PROGRESS: Security integration with infrastructure (Trivy scanning in Helm flow, OPA policies, security Grafana dashboard)
+- Week 4 COMPLETE: Jenkins CI/CD pipeline (11 stages with blue-green option), docker-compose.jenkins.yml for local Jenkins + SonarQube
+- Week 4 COMPLETE: Security integration with infrastructure (Trivy scanning in Helm flow, OPA policies, security Grafana dashboard)
+- Week 4 COMPLETE: Blue-green deployment strategy (Helm templates, preview service, switch script)
+- Week 4 COMPLETE: Load testing with Locust (locustfile, benchmark runner, CI-friendly headless mode)
+- Week 4 COMPLETE: Dashboard visualizations (SVG mockups for 4 Grafana dashboards)
 
 ## Tech Stack
 
@@ -53,6 +56,17 @@
 - Trivy image scan: bash security/trivy-scan.sh [image:tag]
 - OPA policy validation: bash security/validate-manifests.sh
 - Export security metrics: bash security/security-metrics-exporter.sh [pushgateway_url]
+- Blue-green status: bash k8s/blue-green-switch.sh --status
+- Blue-green switch: bash k8s/blue-green-switch.sh [blue|green]
+- Blue-green deploy: bash k8s/blue-green-switch.sh --deploy <tag>
+- Load test (headless): bash tests/load/run-benchmark.sh --users 50 --duration 60
+- Load test (web UI): locust -f tests/load/locustfile.py --host http://localhost:8080
+- Canary status: bash k8s/canary-promote.sh --status
+- Canary promote: bash k8s/canary-promote.sh --auto
+- Canary rollback: bash k8s/canary-promote.sh --rollback
+- MLflow model list: bash scripts/promote-model.sh --list
+- MLflow promote to prod: bash scripts/promote-model.sh --prod <version>
+- MLflow deploy prod model: bash scripts/promote-model.sh --deploy
 
 ## Git Workflow
 
@@ -61,9 +75,9 @@
 
 ## What Needs To Be Done Next
 
-1. ~~Populate Jenkins pipeline (ci/Jenkinsfile)~~ DONE - 10 stages implemented
+1. ~~Populate Jenkins pipeline (ci/Jenkinsfile)~~ DONE - 11 stages implemented (incl. blue-green)
 2. ~~Configure security tools (security/gitleaks.toml, security/trivy-config.yaml)~~ DONE
-3. ~~Set up OPA policies~~ DONE - SonarQube integration still needed
-4. Blue-green deployment strategy
-5. Load testing and performance benchmarks
-6. Screenshots for README dashboard placeholders
+3. ~~Set up OPA policies~~ DONE - SonarQube integration DONE (Stage 6 in Jenkinsfile)
+4. ~~Blue-green deployment strategy~~ DONE - Helm templates, preview service, switch script
+5. ~~Load testing and performance benchmarks~~ DONE - Locust test suite with benchmark runner
+6. ~~Screenshots for README dashboard placeholders~~ DONE - SVG mockups for 4 dashboards

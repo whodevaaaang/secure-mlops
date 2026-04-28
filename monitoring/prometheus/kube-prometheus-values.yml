@@ -34,16 +34,9 @@ grafana:
       enabled: true
       label: grafana_dashboard
       searchNamespace: ALL
-  # Default Prometheus datasource
-  datasources:
-    datasources.yaml:
-      apiVersion: 1
-      datasources:
-        - name: Prometheus
-          type: prometheus
-          url: http://monitoring-kube-prometheus-prometheus:9090
-          access: proxy
-          isDefault: true
+  # Default Prometheus datasource is provisioned by kube-prometheus-stack automatically.
+  # Do not add a duplicate here - it causes Grafana to crash with
+  # "Only one datasource per organization can be marked as default".
 
 alertmanager:
   enabled: true

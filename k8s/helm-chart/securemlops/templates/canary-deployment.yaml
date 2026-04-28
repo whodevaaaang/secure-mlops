@@ -1,0 +1,207 @@
+{{- if .Values.canary.enabled }}
+---
+# Stable (primary) Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-stable
+  labels:
+    app: {{ .Release.Name }}-api
+    track: stable
+    project: secure-mlops
+spec:
+  replicas: {{ .Values.canary.stable.replicas }}
+  revisionHistoryLimit: {{ .Values.rollback.revisionHistoryLimit }}
+  minReadySeconds: {{ .Values.rollback.minReadySeconds }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-api
+      track: stable
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-api
+        track: stable
+      {{- if .Values.metrics.enabled }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.metrics.port }}"
+        prometheus.io/path: "{{ .Values.metrics.path }}"
+      {{- end }}
+    spec:
+      containers:
+        - name: mlops-api
+          image: "{{ .Values.canary.stable.image.repository }}:{{ .Values.canary.stable.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+          resources:
+            requests:
+              memory: {{ .Values.resources.requests.memory }}
+              cpu: {{ .Values.resources.requests.cpu }}
+            limits:
+              memory: {{ .Values.resources.limits.memory }}
+              cpu: {{ .Values.resources.limits.cpu }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.health.liveness.path }}
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: {{ .Values.health.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.health.liveness.periodSeconds }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.health.readiness.path }}
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: {{ .Values.health.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.health.readiness.periodSeconds }}
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            - name: DEPLOYMENT_TRACK
+              value: "stable"
+            {{- if .Values.drift.enabled }}
+            - name: PREDICTION_LOG_DIR
+              value: "/data/predictions"
+          volumeMounts:
+            - name: prediction-data
+              mountPath: /data/predictions
+            {{- end }}
+      {{- if .Values.drift.enabled }}
+      volumes:
+        - name: prediction-data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-prediction-data
+      {{- end }}
+---
+# Canary Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-canary
+  labels:
+    app: {{ .Release.Name }}-api
+    track: canary
+    project: secure-mlops
+spec:
+  replicas: {{ .Values.canary.replicas }}
+  revisionHistoryLimit: {{ .Values.rollback.revisionHistoryLimit }}
+  minReadySeconds: {{ .Values.rollback.minReadySeconds }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-api
+      track: canary
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-api
+        track: canary
+      {{- if .Values.metrics.enabled }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.metrics.port }}"
+        prometheus.io/path: "{{ .Values.metrics.path }}"
+      {{- end }}
+    spec:
+      containers:
+        - name: mlops-api
+          image: "{{ .Values.canary.image.repository }}:{{ .Values.canary.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+          resources:
+            requests:
+              memory: {{ .Values.resources.requests.memory }}
+              cpu: {{ .Values.resources.requests.cpu }}
+            limits:
+              memory: {{ .Values.resources.limits.memory }}
+              cpu: {{ .Values.resources.limits.cpu }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.health.liveness.path }}
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: {{ .Values.health.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.health.liveness.periodSeconds }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.health.readiness.path }}
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: {{ .Values.health.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.health.readiness.periodSeconds }}
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            - name: DEPLOYMENT_TRACK
+              value: "canary"
+            {{- if .Values.drift.enabled }}
+            - name: PREDICTION_LOG_DIR
+              value: "/data/predictions"
+          volumeMounts:
+            - name: prediction-data
+              mountPath: /data/predictions
+            {{- end }}
+      {{- if .Values.drift.enabled }}
+      volumes:
+        - name: prediction-data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-prediction-data
+      {{- end }}
+---
+# Canary service — routes to BOTH stable and canary pods via shared "app" label.
+# Traffic split is controlled by replica ratio (e.g., 2 stable + 1 canary = ~33% canary).
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-service
+  labels:
+    app: {{ .Release.Name }}-api
+  {{- if .Values.metrics.enabled }}
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "{{ .Values.metrics.port }}"
+    prometheus.io/path: "{{ .Values.metrics.path }}"
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app: {{ .Release.Name }}-api
+  ports:
+    - name: http
+      protocol: TCP
+      port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      nodePort: {{ .Values.service.nodePort }}
+---
+# Canary-only service for isolated testing
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-canary
+  labels:
+    app: {{ .Release.Name }}-api
+    track: canary
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app: {{ .Release.Name }}-api
+    track: canary
+  ports:
+    - name: http
+      protocol: TCP
+      port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      nodePort: {{ .Values.canary.nodePort }}
+{{- end }}

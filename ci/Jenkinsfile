@@ -1,9 +1,14 @@
 // SecureMLOps CI/CD Pipeline
-// 10-stage pipeline: lint, test, security scan, build, deploy, verify
-// Requires: Docker, Python 3.10, Helm, kubectl, Minikube, Trivy, conftest, Gitleaks, Bandit
+// 12-stage pipeline: checkout, dependencies, lint, test, security scan (parallel),
+// SonarQube, Docker build + Trivy, OPA, Helm deploy, blue-green deploy, health check, load test
+// Requires: Docker, Python 3.10, Helm, kubectl, Minikube, Trivy, conftest, Gitleaks, Bandit, Locust
 
 pipeline {
     agent any
+
+    parameters {
+        choice(name: 'DEPLOY_STRATEGY', choices: ['rolling', 'blue-green'], description: 'Deployment strategy')
+    }
 
     environment {
         IMAGE_NAME     = 'secure-mlops-api'
@@ -42,11 +47,15 @@ pipeline {
             steps {
                 dir("${APP_DIR}") {
                     sh '''
+                        # Use pip cache to speed up repeated builds
+                        export PIP_CACHE_DIR="${WORKSPACE}/.pip-cache"
+                        mkdir -p "$PIP_CACHE_DIR"
+
                         python3 -m venv venv
                         . venv/bin/activate
                         pip install --upgrade pip
-                        pip install -r requirements.txt
-                        pip install flake8 bandit
+                        pip install --cache-dir="$PIP_CACHE_DIR" -r requirements.txt
+                        pip install --cache-dir="$PIP_CACHE_DIR" flake8 bandit
                     '''
                 }
             }
@@ -169,16 +178,26 @@ pipeline {
         stage('Docker Build + Trivy Scan') {
             steps {
                 script {
-                    // Point docker to Minikube's daemon
-                    sh 'eval $(minikube docker-env) && docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ${APP_DIR}/'
+                    // Point docker to Minikube's daemon with BuildKit + cache
+                    sh '''
+                        eval $(minikube docker-env)
+                        DOCKER_BUILDKIT=1 docker build \
+                            --build-arg BUILDKIT_INLINE_CACHE=1 \
+                            --cache-from ${IMAGE_NAME}:v1 \
+                            -t ${IMAGE_NAME}:${IMAGE_TAG} \
+                            ${APP_DIR}/
+                    '''
 
                     // Tag as latest for Helm chart compatibility
                     sh 'eval $(minikube docker-env) && docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:v1'
 
-                    // Run Trivy vulnerability scan
+                    // Run Trivy vulnerability scan (with DB cache)
                     sh '''
                         echo "Scanning image with Trivy..."
+                        export TRIVY_CACHE_DIR="${WORKSPACE}/.trivy-cache"
+                        mkdir -p "$TRIVY_CACHE_DIR"
                         trivy image \
+                            --cache-dir "$TRIVY_CACHE_DIR" \
                             --config security/trivy-config.yaml \
                             --severity CRITICAL,HIGH \
                             --exit-code 1 \
@@ -272,6 +291,31 @@ pipeline {
         }
 
         // =====================================================================
+        // Stage 9b: Blue-Green Deploy (alternative to rolling update)
+        // Deploys new image to inactive slot; switch traffic manually after
+        // verifying via the preview service.
+        // =====================================================================
+        stage('Blue-Green Deploy') {
+            when {
+                allOf {
+                    anyOf {
+                        branch 'main'
+                        branch 'develop'
+                    }
+                    expression { return params.DEPLOY_STRATEGY == 'blue-green' }
+                }
+            }
+            steps {
+                script {
+                    sh '''
+                        echo "Deploying to inactive blue-green slot..."
+                        bash k8s/blue-green-switch.sh --deploy ${IMAGE_TAG}
+                    '''
+                }
+            }
+        }
+
+        // =====================================================================
         // Stage 10: Post-deploy Health Verification
         // =====================================================================
         stage('Health Verification') {
@@ -321,6 +365,62 @@ pipeline {
                         exit 1
                     fi
                 '''
+            }
+        }
+        // =====================================================================
+        // Stage 11: Load Test (post-deploy smoke test)
+        // Runs a short Locust benchmark against the deployed API.
+        // =====================================================================
+        stage('Load Test') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'develop'
+                }
+            }
+            steps {
+                sh '''
+                    echo "Running post-deploy load test..."
+
+                    # Install locust in the existing venv
+                    . ${APP_DIR}/venv/bin/activate
+                    pip install -q -r tests/load/requirements.txt
+
+                    # Port-forward in background
+                    kubectl port-forward service/${HELM_RELEASE}-service 18080:80 &
+                    PF_PID=$!
+                    sleep 3
+
+                    mkdir -p tests/load/results
+
+                    # Run a short smoke test: 20 users, 30 seconds
+                    locust \
+                        -f tests/load/locustfile.py \
+                        --host http://localhost:18080 \
+                        --headless \
+                        -u 20 \
+                        -r 5 \
+                        -t 30s \
+                        --csv=tests/load/results/ci-smoke \
+                        --html=tests/load/results/ci-smoke.html \
+                        --only-summary \
+                        --exit-code-on-error 1
+
+                    LOCUST_EXIT=$?
+                    kill $PF_PID 2>/dev/null || true
+
+                    if [ "$LOCUST_EXIT" -eq 0 ]; then
+                        echo "LOAD TEST PASSED"
+                    else
+                        echo "LOAD TEST FAILED: Locust reported errors"
+                        exit 1
+                    fi
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'tests/load/results/**/*', allowEmptyArchive: true
+                }
             }
         }
     }

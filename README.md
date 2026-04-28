@@ -1,5 +1,16 @@
 # SecureMLOps
 
+![Python](https://img.shields.io/badge/Python-3.10-blue?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green?logo=fastapi&logoColor=white)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-Minikube-326CE5?logo=kubernetes&logoColor=white)
+![Helm](https://img.shields.io/badge/Helm-3-0F1689?logo=helm&logoColor=white)
+![Jenkins](https://img.shields.io/badge/Jenkins-CI%2FCD-D24939?logo=jenkins&logoColor=white)
+![Prometheus](https://img.shields.io/badge/Prometheus-Monitoring-E6522C?logo=prometheus&logoColor=white)
+![Grafana](https://img.shields.io/badge/Grafana-Dashboards-F46800?logo=grafana&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-yellow)
+![Tests](https://img.shields.io/badge/Tests-7%20passing-brightgreen)
+![Security](https://img.shields.io/badge/Security-Trivy%20%7C%20Bandit%20%7C%20Gitleaks%20%7C%20OPA-blueviolet)
+
 A secure ML model delivery pipeline combining DevSecOps and MLOps practices. Built as a 12-week DevOps capstone project demonstrating end-to-end machine learning operations with security-first principles.
 
 ## Overview
@@ -26,7 +37,7 @@ See [docs/architecture.md](docs/architecture.md) for detailed Mermaid diagrams.
                              |
                     +--------v---------+
                     |  Jenkins CI/CD   |
-                    |  (8 stages)      |
+                    |  (11 stages)     |
                     +--------+---------+
                              |
               +--------------+--------------+
@@ -81,8 +92,9 @@ secure-mlops/
 |   |-- manifests/             # Raw K8s deployment + service
 |   |-- helm-chart/            # Helm chart with templates for:
 |   |   +-- securemlops/       #   deployment, service, servicemonitor,
-|   |                          #   drift cronjob, drift PVCs
-|   +-- rollback.sh            # Rollback script with health verification
+|   |                          #   drift cronjob, blue-green templates
+|   |-- rollback.sh            # Rollback script with health verification
+|   +-- blue-green-switch.sh   # Blue-green deployment traffic switch
 |
 |-- monitoring/                # Observability stack
 |   |-- prometheus/            # kube-prometheus-stack values, ServiceMonitor
@@ -95,8 +107,13 @@ secure-mlops/
 |   |-- roles/                 # prerequisites, minikube, app_deploy
 |   +-- inventory/hosts.yml
 |
-|-- ci/Jenkinsfile             # 8-stage CI/CD pipeline
-|-- security/                  # Security tool configs (gitleaks, trivy)
+|-- tests/load/                # Load testing
+|   |-- locustfile.py          # Locust test scenarios
+|   |-- run-benchmark.sh       # Automated benchmark runner
+|   +-- requirements.txt       # Locust dependencies
+|
+|-- ci/Jenkinsfile             # 11-stage CI/CD pipeline
+|-- security/                  # Security tool configs (gitleaks, trivy, OPA)
 |-- docker-compose.yml         # Local dev: PostgreSQL + MLflow + API
 |-- mlflow.Dockerfile          # MLflow tracking server
 +-- docs/architecture.md       # Mermaid architecture diagrams
@@ -212,19 +229,19 @@ Four pre-configured dashboards are auto-provisioned:
 
 **API Performance** -- Request rate, p50/p95/p99 latency, HTTP status codes, error rate
 
-![API Performance Dashboard](docs/screenshots/grafana-api-performance.png)
+![API Performance Dashboard](docs/screenshots/grafana-api-performance.svg)
 
 **System Resources** -- Pod CPU/memory usage vs limits, restarts, ready replicas, network I/O
 
-![System Resources Dashboard](docs/screenshots/grafana-system-resources.png)
+![System Resources Dashboard](docs/screenshots/grafana-system-resources.svg)
 
 **Prediction Metrics** -- Prediction counts by outcome/risk, probability distribution, inference latency
 
-![Prediction Metrics Dashboard](docs/screenshots/grafana-prediction-metrics.png)
+![Prediction Metrics Dashboard](docs/screenshots/grafana-prediction-metrics.svg)
 
 **Drift Detection** -- Dataset drift status, per-feature drift scores, drift history timeline
 
-![Drift Detection Dashboard](docs/screenshots/grafana-drift-detection.png)
+![Drift Detection Dashboard](docs/screenshots/grafana-drift-detection.svg)
 
 ### Drift Detection
 
@@ -234,6 +251,46 @@ To trigger a manual drift check:
 
 ```bash
 kubectl create job --from=cronjob/securemlops-drift-detection drift-manual-$(date +%s)
+```
+
+## Deployment Strategies
+
+### Rolling Update (default)
+
+The default strategy uses rolling updates (maxSurge=1, maxUnavailable=0) for zero-downtime deployments.
+
+### Blue-Green Deployment
+
+Blue-green deployment maintains two identical environments. Only one serves live traffic at a time, enabling instant rollback by switching the service selector.
+
+**Enable blue-green mode:**
+
+```bash
+helm upgrade securemlops k8s/helm-chart/securemlops/ \
+    --set blueGreen.enabled=true \
+    --set blueGreen.blue.image.tag=v1 \
+    --set blueGreen.green.image.tag=v2
+```
+
+**Deploy a new version to the inactive slot:**
+
+```bash
+bash k8s/blue-green-switch.sh --deploy v3
+```
+
+**Preview the new version before switching:**
+
+```bash
+kubectl port-forward service/securemlops-preview 8081:80
+# Test at http://localhost:8081
+```
+
+**Switch live traffic:**
+
+```bash
+bash k8s/blue-green-switch.sh           # Switch to inactive slot
+bash k8s/blue-green-switch.sh green     # Switch to specific slot
+bash k8s/blue-green-switch.sh --status  # View current status
 ```
 
 ## Rollback
@@ -256,6 +313,8 @@ bash k8s/rollback.sh --status
 
 ## Running Tests
 
+### Unit Tests
+
 ```bash
 cd ml-app
 source venv/bin/activate
@@ -263,6 +322,35 @@ pytest tests/test_api.py -v
 ```
 
 7 tests covering health checks, valid/invalid predictions, edge cases, and model info.
+
+### Load Testing
+
+Load tests use [Locust](https://locust.io/) to simulate realistic traffic against the prediction API.
+
+**Quick benchmark (headless):**
+
+```bash
+pip install -r tests/load/requirements.txt
+bash tests/load/run-benchmark.sh --users 50 --duration 60
+```
+
+**Interactive mode (web UI at http://localhost:8089):**
+
+```bash
+locust -f tests/load/locustfile.py --host http://localhost:8080
+```
+
+**Custom benchmark:**
+
+```bash
+bash tests/load/run-benchmark.sh \
+    --host http://192.168.49.2:30080 \
+    --users 100 \
+    --spawn-rate 10 \
+    --duration 120
+```
+
+Reports are saved to `tests/load/results/` as HTML and CSV.
 
 ## Team
 

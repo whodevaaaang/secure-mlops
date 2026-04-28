@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="500" viewBox="0 0 900 500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16213e;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="900" height="500" fill="url(#bg)"/>
+  <!-- Header -->
+  <rect x="0" y="0" width="900" height="40" fill="#0f3460" opacity="0.8"/>
+  <text x="20" y="26" fill="#e94560" font-family="Arial,sans-serif" font-size="16" font-weight="bold">Grafana</text>
+  <text x="100" y="26" fill="#ffffff" font-family="Arial,sans-serif" font-size="14">/ SecureMLOps / API Performance</text>
+  <!-- Panel 1: Request Rate -->
+  <rect x="15" y="55" width="425" height="200" rx="4" fill="#1e2a3a" stroke="#2a3a4a" stroke-width="1"/>
+  <text x="30" y="78" fill="#cccccc" font-family="Arial,sans-serif" font-size="12">Request Rate (req/s)</text>
+  <polyline points="35,230 80,200 130,210 180,180 230,190 280,160 330,170 380,150 420,145" fill="none" stroke="#73bf69" stroke-width="2"/>
+  <polyline points="35,235 80,225 130,228 180,215 230,220 280,205 330,210 380,198 420,195" fill="none" stroke="#f2cc0c" stroke-width="2" stroke-dasharray="4"/>
+  <text x="30" y="248" fill="#73bf69" font-family="Arial,sans-serif" font-size="10">200 OK</text>
+  <text x="110" y="248" fill="#f2cc0c" font-family="Arial,sans-serif" font-size="10">Total</text>
+  <!-- Panel 2: Latency -->
+  <rect x="455" y="55" width="430" height="200" rx="4" fill="#1e2a3a" stroke="#2a3a4a" stroke-width="1"/>
+  <text x="470" y="78" fill="#cccccc" font-family="Arial,sans-serif" font-size="12">Response Latency (ms)</text>
+  <polyline points="475,220 520,215 570,200 620,210 670,195 720,205 770,190 830,185" fill="none" stroke="#5794f2" stroke-width="2"/>
+  <polyline points="475,200 520,195 570,185 620,190 670,180 720,188 770,175 830,170" fill="none" stroke="#ff9830" stroke-width="2"/>
+  <polyline points="475,180 520,175 570,160 620,165 670,155 720,160 770,145 830,140" fill="none" stroke="#e94560" stroke-width="2"/>
+  <text x="470" y="248" fill="#5794f2" font-family="Arial,sans-serif" font-size="10">p50: 4.2ms</text>
+  <text x="570" y="248" fill="#ff9830" font-family="Arial,sans-serif" font-size="10">p95: 12.1ms</text>
+  <text x="680" y="248" fill="#e94560" font-family="Arial,sans-serif" font-size="10">p99: 28.4ms</text>
+  <!-- Panel 3: Status Codes -->
+  <rect x="15" y="270" width="280" height="215" rx="4" fill="#1e2a3a" stroke="#2a3a4a" stroke-width="1"/>
+  <text x="30" y="293" fill="#cccccc" font-family="Arial,sans-serif" font-size="12">HTTP Status Codes</text>
+  <circle cx="155" cy="380" r="60" fill="none" stroke="#73bf69" stroke-width="20" stroke-dasharray="340 377" stroke-dashoffset="0"/>
+  <circle cx="155" cy="380" r="60" fill="none" stroke="#f2cc0c" stroke-width="20" stroke-dasharray="25 377" stroke-dashoffset="-340"/>
+  <circle cx="155" cy="380" r="60" fill="none" stroke="#e94560" stroke-width="20" stroke-dasharray="12 377" stroke-dashoffset="-365"/>
+  <text x="130" y="385" fill="#ffffff" font-family="Arial,sans-serif" font-size="16" font-weight="bold">98.2%</text>
+  <text x="30" y="475" fill="#73bf69" font-family="Arial,sans-serif" font-size="10">2xx: 98.2%</text>
+  <text x="120" y="475" fill="#f2cc0c" font-family="Arial,sans-serif" font-size="10">4xx: 1.5%</text>
+  <text x="200" y="475" fill="#e94560" font-family="Arial,sans-serif" font-size="10">5xx: 0.3%</text>
+  <!-- Panel 4: Error Rate -->
+  <rect x="310" y="270" width="280" height="215" rx="4" fill="#1e2a3a" stroke="#2a3a4a" stroke-width="1"/>
+  <text x="325" y="293" fill="#cccccc" font-family="Arial,sans-serif" font-size="12">Error Rate</text>
+  <text x="390" y="400" fill="#73bf69" font-family="Arial,sans-serif" font-size="48" font-weight="bold">0.3%</text>
+  <text x="410" y="430" fill="#888888" font-family="Arial,sans-serif" font-size="12">5xx errors / total</text>
+  <!-- Panel 5: Throughput -->
+  <rect x="605" y="270" width="280" height="215" rx="4" fill="#1e2a3a" stroke="#2a3a4a" stroke-width="1"/>
+  <text x="620" y="293" fill="#cccccc" font-family="Arial,sans-serif" font-size="12">Throughput</text>
+  <text x="665" y="400" fill="#5794f2" font-family="Arial,sans-serif" font-size="48" font-weight="bold">142</text>
+  <text x="680" y="430" fill="#888888" font-family="Arial,sans-serif" font-size="12">requests/sec avg</text>
+</svg>

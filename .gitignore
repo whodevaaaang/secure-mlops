@@ -27,5 +27,19 @@ mlartifacts/
 # Logs
 *.log
 
+# Test outputs
+ml-app/test-results.xml
+ml-app/*.xml
+.pytest_cache/
+tests/load/results/
+
 # Security scan outputs
+security/reports/*.json
 security/reports/generated/
+
+# CI caches
+.pip-cache/
+.trivy-cache/
+
+# Runtime data
+ml-app/data/predictions/

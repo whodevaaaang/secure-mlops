@@ -11,18 +11,18 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 echo "=== SecureMLOps Monitoring Setup ==="
 
 # Step 1: Add Helm repo
-echo "[1/8] Adding prometheus-community Helm repo..."
+echo "[1/10] Adding prometheus-community Helm repo..."
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts 2>/dev/null || true
 helm repo update
 
 # Step 2: Install kube-prometheus-stack (includes Pushgateway for drift metrics)
-echo "[2/8] Installing kube-prometheus-stack..."
+echo "[2/10] Installing kube-prometheus-stack..."
 helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
   -f "$SCRIPT_DIR/prometheus/kube-prometheus-values.yml" \
   --wait --timeout 5m
 
 # Step 3: Create dashboard ConfigMaps from JSON files
-echo "[3/8] Loading Grafana dashboards..."
+echo "[3/10] Loading Grafana dashboards..."
 for dashboard in "$SCRIPT_DIR/grafana/dashboards/"*.json; do
   name=$(basename "$dashboard" .json)
   kubectl create configmap "grafana-dashboard-${name}" \
@@ -33,16 +33,16 @@ for dashboard in "$SCRIPT_DIR/grafana/dashboards/"*.json; do
 done
 
 # Step 4: Apply ServiceMonitor for ML API
-echo "[4/8] Applying ServiceMonitor..."
+echo "[4/10] Applying ServiceMonitor..."
 kubectl apply -f "$SCRIPT_DIR/prometheus/servicemonitor.yml"
 
 # Step 5: Build drift detector image in Minikube
-echo "[5/8] Building drift detector image..."
+echo "[5/10] Building drift detector image..."
 eval $(minikube docker-env)
 docker build -t securemlops-drift-detector:v1 "$SCRIPT_DIR/evidently/"
 
 # Step 6: Run Trivy security scan (if trivy is installed)
-echo "[6/8] Running security scans..."
+echo "[6/10] Running security scans..."
 if command -v trivy &> /dev/null; then
     echo "  Running Trivy image scan..."
     bash "$PROJECT_ROOT/security/trivy-scan.sh" "secure-mlops-api:v1" || {
@@ -54,7 +54,7 @@ else
 fi
 
 # Step 7: Run OPA policy validation (if conftest is installed)
-echo "[7/8] Validating K8s manifests against OPA policies..."
+echo "[7/10] Validating K8s manifests against OPA policies..."
 if command -v conftest &> /dev/null; then
     bash "$PROJECT_ROOT/security/validate-manifests.sh" || {
         echo "  WARNING: OPA policy violations found (see report for details)"
@@ -64,8 +64,23 @@ else
     echo "  Install: brew install conftest  OR  go install github.com/open-policy-agent/conftest@latest"
 fi
 
-# Step 8: Export security metrics to Pushgateway
-echo "[8/8] Exporting security metrics..."
+# Step 8: Verify alerting rules, RBAC, and network policies
+echo "[8/10] Verifying alerting rules..."
+ALERT_COUNT=$(kubectl get prometheusrules -l app=securemlops-api -o name 2>/dev/null | wc -l)
+if [ "$ALERT_COUNT" -gt 0 ]; then
+    echo "  Alerting rules active: ${ALERT_COUNT} PrometheusRule(s)"
+else
+    echo "  No alerting rules found — they will be created with the next Helm deploy"
+fi
+
+echo "[9/10] Verifying RBAC and service accounts..."
+SA_COUNT=$(kubectl get serviceaccounts -l project=secure-mlops -o name 2>/dev/null | wc -l)
+echo "  Service accounts: ${SA_COUNT}"
+ROLE_COUNT=$(kubectl get roles -l project=secure-mlops -o name 2>/dev/null | wc -l)
+echo "  Roles: ${ROLE_COUNT}"
+
+# Step 10: Export security metrics to Pushgateway
+echo "[10/10] Exporting security metrics..."
 PUSHGATEWAY_URL=$(kubectl get svc monitoring-kube-prometheus-pushgateway -o jsonpath='{.spec.clusterIP}' 2>/dev/null || echo "")
 if [ -n "$PUSHGATEWAY_URL" ]; then
     bash "$PROJECT_ROOT/security/security-metrics-exporter.sh" "http://${PUSHGATEWAY_URL}:9091" || {

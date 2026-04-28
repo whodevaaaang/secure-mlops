@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="500" viewBox="0 0 900 500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16213e;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="900" height="500" fill="url(#bg)"/>
+  <!-- Header -->
+  <rect x="0" y="0" width="900" height="40" fill="#0f3460" opacity="0.8"/>
+  <text x="20" y="26" fill="#e94560" font-family="Arial,sans-serif" font-size="16" font-weight="bold">Grafana</text>
+  <text x="100" y="26" fill="#ffffff" font-family="Arial,sans-serif" font-size="14">/ SecureMLOps / Drift Detection</text>
+  <!-- Panel 1: Dataset Drift Status -->
+  <rect x="15" y="55" width="280" height="200" rx="4" fill="#1e2a3a" stroke="#2a3a4a" stroke-width="1"/>
+  <text x="30" y="78" fill="#cccccc" font-family="Arial,sans-serif" font-size="12">Dataset Drift Status</text>
+  <circle cx="155" cy="160" r="50" fill="none" stroke="#73bf69" stroke-width="6"/>
+  <text x="112" y="155" fill="#73bf69" font-family="Arial,sans-serif" font-size="18" font-weight="bold">NO</text>
+  <text x="110" y="178" fill="#73bf69" font-family="Arial,sans-serif" font-size="18" font-weight="bold">DRIFT</text>
+  <text x="100" y="240" fill="#888888" font-family="Arial,sans-serif" font-size="10">Last check: 2h ago</text>
+  <!-- Panel 2: Per-Feature Drift Scores -->
+  <rect x="310" y="55" width="575" height="200" rx="4" fill="#1e2a3a" stroke="#2a3a4a" stroke-width="1"/>
+  <text x="325" y="78" fill="#cccccc" font-family="Arial,sans-serif" font-size="12">Per-Feature Drift Score (p-value threshold: 0.05)</text>
+  <rect x="325" y="105" width="540" height="1" fill="#e94560" opacity="0.3"/>
+  <text x="870" y="102" fill="#e94560" font-family="Arial,sans-serif" font-size="8">0.05</text>
+  <!-- Feature bars (horizontal, showing p-values) -->
+  <text x="330" y="130" fill="#aaaaaa" font-family="Arial,sans-serif" font-size="10">age</text>
+  <rect x="430" y="119" width="320" height="14" rx="2" fill="#73bf69" opacity="0.7"/>
+  <text x="760" y="130" fill="#cccccc" font-family="Arial,sans-serif" font-size="9">0.42</text>
+  <text x="330" y="152" fill="#aaaaaa" font-family="Arial,sans-serif" font-size="10">income</text>
+  <rect x="430" y="141" width="180" height="14" rx="2" fill="#73bf69" opacity="0.7"/>
+  <text x="620" y="152" fill="#cccccc" font-family="Arial,sans-serif" font-size="9">0.23</text>
+  <text x="330" y="174" fill="#aaaaaa" font-family="Arial,sans-serif" font-size="10">loan_amount</text>
+  <rect x="430" y="163" width="260" height="14" rx="2" fill="#73bf69" opacity="0.7"/>
+  <text x="700" y="174" fill="#cccccc" font-family="Arial,sans-serif" font-size="9">0.34</text>
+  <text x="330" y="196" fill="#aaaaaa" font-family="Arial,sans-serif" font-size="10">credit_score</text>
+  <rect x="430" y="185" width="140" height="14" rx="2" fill="#f2cc0c" opacity="0.7"/>
+  <text x="580" y="196" fill="#cccccc" font-family="Arial,sans-serif" font-size="9">0.08</text>
+  <text x="330" y="218" fill="#aaaaaa" font-family="Arial,sans-serif" font-size="10">employment_yrs</text>
+  <rect x="430" y="207" width="400" height="14" rx="2" fill="#73bf69" opacity="0.7"/>
+  <text x="840" y="218" fill="#cccccc" font-family="Arial,sans-serif" font-size="9">0.58</text>
+  <text x="330" y="240" fill="#aaaaaa" font-family="Arial,sans-serif" font-size="10">existing_loans</text>
+  <rect x="430" y="229" width="220" height="14" rx="2" fill="#73bf69" opacity="0.7"/>
+  <text x="660" y="240" fill="#cccccc" font-family="Arial,sans-serif" font-size="9">0.31</text>
+  <!-- Panel 3: Drift History Timeline -->
+  <rect x="15" y="270" width="870" height="215" rx="4" fill="#1e2a3a" stroke="#2a3a4a" stroke-width="1"/>
+  <text x="30" y="293" fill="#cccccc" font-family="Arial,sans-serif" font-size="12">Drift Detection History (last 7 days)</text>
+  <!-- Timeline grid -->
+  <line x1="50" y1="310" x2="50" y2="460" stroke="#2a3a4a" stroke-width="1"/>
+  <line x1="170" y1="310" x2="170" y2="460" stroke="#2a3a4a" stroke-width="1"/>
+  <line x1="290" y1="310" x2="290" y2="460" stroke="#2a3a4a" stroke-width="1"/>
+  <line x1="410" y1="310" x2="410" y2="460" stroke="#2a3a4a" stroke-width="1"/>
+  <line x1="530" y1="310" x2="530" y2="460" stroke="#2a3a4a" stroke-width="1"/>
+  <line x1="650" y1="310" x2="650" y2="460" stroke="#2a3a4a" stroke-width="1"/>
+  <line x1="770" y1="310" x2="770" y2="460" stroke="#2a3a4a" stroke-width="1"/>
+  <!-- Threshold line -->
+  <line x1="50" y1="340" x2="850" y2="340" stroke="#e94560" stroke-width="1" stroke-dasharray="4"/>
+  <text x="855" y="344" fill="#e94560" font-family="Arial,sans-serif" font-size="8">drift threshold</text>
+  <!-- Drift score line -->
+  <polyline points="50,420 110,415 170,425 230,410 290,420 350,405 410,415 470,400 530,410 590,395 650,405 710,390 770,400 830,395" fill="none" stroke="#5794f2" stroke-width="2"/>
+  <!-- Status dots -->
+  <circle cx="50" r="5" cy="420" fill="#73bf69"/>
+  <circle cx="170" r="5" cy="425" fill="#73bf69"/>
+  <circle cx="290" r="5" cy="420" fill="#73bf69"/>
+  <circle cx="410" r="5" cy="415" fill="#73bf69"/>
+  <circle cx="530" r="5" cy="410" fill="#73bf69"/>
+  <circle cx="650" r="5" cy="405" fill="#73bf69"/>
+  <circle cx="770" r="5" cy="400" fill="#73bf69"/>
+  <!-- Day labels -->
+  <text x="40" y="478" fill="#666666" font-family="Arial,sans-serif" font-size="9">Mon</text>
+  <text x="160" y="478" fill="#666666" font-family="Arial,sans-serif" font-size="9">Tue</text>
+  <text x="280" y="478" fill="#666666" font-family="Arial,sans-serif" font-size="9">Wed</text>
+  <text x="400" y="478" fill="#666666" font-family="Arial,sans-serif" font-size="9">Thu</text>
+  <text x="520" y="478" fill="#666666" font-family="Arial,sans-serif" font-size="9">Fri</text>
+  <text x="640" y="478" fill="#666666" font-family="Arial,sans-serif" font-size="9">Sat</text>
+  <text x="760" y="478" fill="#666666" font-family="Arial,sans-serif" font-size="9">Sun</text>
+</svg>

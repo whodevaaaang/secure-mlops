@@ -15,7 +15,7 @@
 
   pre_tasks:
     - name: Verify Minikube is running
-      command: minikube status --format='{{`{{ .Host }}`}}'
+      command: minikube status --format='{% raw %}{{ .Host }}{% endraw %}'
       register: minikube_check
       changed_when: false
       failed_when: minikube_check.stdout != 'Running'

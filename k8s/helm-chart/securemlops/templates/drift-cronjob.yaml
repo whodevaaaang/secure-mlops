@@ -19,6 +19,8 @@ spec:
           labels:
             app: {{ .Release.Name }}-drift
         spec:
+          serviceAccountName: {{ .Release.Name }}-drift-detector
+          automountServiceAccountToken: false
           restartPolicy: Never
           containers:
             - name: drift-detector
